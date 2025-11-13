@@ -3,6 +3,7 @@
 //! Loads WOZMON + BASIC ROMs, pipes host stdin into the Apple I keyboard MMIO,
 //! and prints characters written to the display register.
 
+use std::collections::VecDeque;
 use std::io::{self, Write};
 
 use ull65::bus::{AccessType, Bus};
@@ -18,22 +19,25 @@ const DISPLAY_DATA: u16 = 0xD012;
 
 const BASIC_ROM: &[u8] = include_bytes!("../../../thirdparty/applei/BASIC.ROM");
 const WOZMON_ROM: &[u8] = include_bytes!("../../../thirdparty/applei/WOZMON.ROM");
+const PUMP_CYCLES: usize = 1_000_000;
 
 struct Apple1Bus {
-    mem: [u8; MEMORY_SIZE],
-    rom_mask: [bool; MEMORY_SIZE],
+    mem: Box<[u8]>,
+    rom_mask: Box<[bool]>,
     keyboard_data: u8,
     keyboard_ready: bool,
+    pending_keys: VecDeque<u8>,
     display_buffer: Vec<u8>,
 }
 
 impl Apple1Bus {
     fn new() -> Self {
         let mut bus = Self {
-            mem: [0; MEMORY_SIZE],
-            rom_mask: [false; MEMORY_SIZE],
+            mem: vec![0; MEMORY_SIZE].into_boxed_slice(),
+            rom_mask: vec![false; MEMORY_SIZE].into_boxed_slice(),
             keyboard_data: 0,
             keyboard_ready: false,
+            pending_keys: VecDeque::new(),
             display_buffer: Vec::new(),
         };
         bus.load_basic();
@@ -56,7 +60,7 @@ impl Apple1Bus {
             self.rom_mask[idx] = true;
         }
 
-        let entry = WOZMON_START as u16;
+        let entry = u16::try_from(WOZMON_START).expect("WOZMON start fits in 16 bits");
         self.write_vector(RESET_VECTOR_LO, entry);
         self.write_vector(NMI_VECTOR_LO, entry);
         self.write_vector(IRQ_VECTOR_LO, entry);
@@ -73,15 +77,34 @@ impl Apple1Bus {
     }
 
     fn push_key(&mut self, ascii: u8) {
-        self.keyboard_data = ascii | 0x80;
-        self.keyboard_ready = true;
+        let value = ascii & 0x7F;
+        if self.keyboard_ready {
+            self.pending_keys.push_back(value);
+        } else {
+            self.keyboard_data = value;
+            self.keyboard_ready = true;
+        }
+    }
+
+    fn load_next_key(&mut self) {
+        if !self.keyboard_ready {
+            if let Some(next) = self.pending_keys.pop_front() {
+                self.keyboard_data = next;
+                self.keyboard_ready = true;
+            }
+        }
     }
 
     fn read_keyboard(&mut self, addr: u16) -> Byte {
         match addr {
             KBD_DATA => {
-                self.keyboard_ready = false;
-                Byte(self.keyboard_data)
+                let mut value = self.keyboard_data;
+                if self.keyboard_ready {
+                    value |= 0x80;
+                    self.keyboard_ready = false;
+                    self.load_next_key();
+                }
+                Byte(value)
             }
             KBD_STATUS => {
                 if self.keyboard_ready {
@@ -96,7 +119,14 @@ impl Apple1Bus {
 
     fn write_display(&mut self, value: Byte) {
         let ch = value.0 & 0x7F;
-        if ch == b'\r' {
+        if ch == 0x7F {
+            // Ignore RUBOUT control characters WOZMON emits as part of its handshake.
+            return;
+        }
+        if ch == 0x9B {
+            // Apple I uses 0x9B as newline.
+            self.display_buffer.extend_from_slice(b"\r\n");
+        } else if ch == b'\r' {
             self.display_buffer.extend_from_slice(b"\r\n");
         } else {
             self.display_buffer.push(ch);
@@ -131,7 +161,12 @@ impl Bus for Apple1Bus {
         let value = value.into();
         match addr.0 {
             DISPLAY_DATA => self.write_display(value),
-            KBD_DATA | KBD_STATUS => {}
+            KBD_STATUS => {
+                // Writing any value clears the ready flag on real hardware.
+                self.keyboard_ready = false;
+                self.load_next_key();
+            }
+            KBD_DATA => {}
             _ => {
                 let idx = addr.as_usize();
                 if !self.rom_mask[idx] {
@@ -142,8 +177,8 @@ impl Bus for Apple1Bus {
     }
 }
 
-fn pump(cpu: &mut Cpu<Apple1Bus>, bus: &mut Apple1Bus, iterations: usize) {
-    for _ in 0..iterations {
+fn pump(cpu: &mut Cpu<Apple1Bus>, bus: &mut Apple1Bus) {
+    for _ in 0..PUMP_CYCLES {
         if cpu.tick(bus) == 0 {
             break;
         }
@@ -163,11 +198,15 @@ fn main() -> io::Result<()> {
     let mut cpu: Cpu<Apple1Bus> = Cpu::default();
     cpu.reset(&mut bus);
 
-    println!("Apple I WOZMON demo. Type ':quit' to exit.\n");
+    println!("Apple I WOZMON demo. Type 'E000R' to enter BASIC mode and ':quit' to exit.\n");
+
+    // Give WOZMON time to print its banner and prompt before accepting input.
+    pump(&mut cpu, &mut bus);
+    flush_display(&mut bus);
 
     let stdin = io::stdin();
     loop {
-        pump(&mut cpu, &mut bus, 50_000);
+        pump(&mut cpu, &mut bus);
         flush_display(&mut bus);
 
         let mut line = String::new();
@@ -181,7 +220,7 @@ fn main() -> io::Result<()> {
             match ch {
                 '\r' => {}
                 '\n' => bus.push_key(b'\r'),
-                _ => bus.push_key(ch as u8),
+                _ => bus.push_key(ch.to_ascii_uppercase() as u8),
             }
         }
 
@@ -189,7 +228,7 @@ fn main() -> io::Result<()> {
             bus.push_key(b'\r');
         }
 
-        pump(&mut cpu, &mut bus, 50_000);
+        pump(&mut cpu, &mut bus);
         flush_display(&mut bus);
     }
 

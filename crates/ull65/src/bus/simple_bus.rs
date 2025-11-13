@@ -1,9 +1,9 @@
 //! Basic 64KB flat memory implementation.
 
-use alloc::{boxed::Box, vec};
 use crate::bus::AccessType;
 use crate::word::Word;
 use crate::{Bus, Byte};
+use alloc::{boxed::Box, vec};
 
 /// Simple 64KB flat memory implementation.
 ///

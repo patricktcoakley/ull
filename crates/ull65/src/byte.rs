@@ -40,26 +40,26 @@ impl Byte {
 
     /// Returns `true` if bit 7 is set (negative in signed arithmetic).
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn is_signed(self) -> bool {
         self.0 & Flags::Sign.bits() != 0
     }
 
     /// Converts to `usize` for indexing.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn lo(self) -> Nibble {
         Nibble(self.0 & 0x0F)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn hi(self) -> Nibble {
         Nibble((self.0 >> 4) & 0x0F)
     }

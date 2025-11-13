@@ -1,7 +1,7 @@
 //! The WDC 65C02 instruction set implementation.
 
 use crate::byte::Byte;
-use crate::instruction::mos6502::{illegal, illegal_a, Mos6502};
+use crate::instruction::mos6502::{Mos6502, illegal, illegal_a};
 use crate::instruction::{Instruction, InstructionSet, InstructionTable};
 use crate::processor::addressing_mode::{
     Absolute, AbsoluteIndirectCorrect, AbsoluteIndirectX, AbsoluteX, Immediate, ZeroPage,
@@ -9,13 +9,13 @@ use crate::processor::addressing_mode::{
 };
 use crate::processor::flags::Flags;
 use crate::word::Word;
-use crate::{word, AccessType, AddressingMode, Bus, Cpu, RunState, IRQ_VECTOR_HI, IRQ_VECTOR_LO};
+use crate::{AccessType, AddressingMode, Bus, Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState, word};
 
 pub struct Wdc65c02s;
 
 impl Wdc65c02s {
     /// Builds the canonical WDC 65C02S instruction table.
-    #[must_use] 
+    #[must_use]
     pub const fn base_table<B: Bus + 'static>() -> InstructionTable<B> {
         Mos6502::base_table()
             // BRK with decimal clear
@@ -1066,8 +1066,8 @@ mod tests {
     use crate::bus::SimpleBus;
     use crate::processor::addressing_mode::{AbsoluteX, Immediate, ZeroPage};
     use crate::processor::flags::Flags;
-    use crate::{byte, word};
     use crate::{RunState, STACK_SPACE_START};
+    use crate::{byte, word};
 
     #[test]
     fn test_bra_branches_forward() {

@@ -3,12 +3,12 @@
 //! `BRK` opcode (0x00) with a custom handler that traps into our code
 //! instead of invoking the IRQ vector.
 
-use ull65::bus::{Bus, SimpleBus};
-use ull65::instruction::{mos6502::Mos6502, Instruction, InstructionSet};
 use ull65::Word;
+use ull65::bus::{Bus, SimpleBus};
+use ull65::instruction::{Instruction, InstructionSet, mos6502::Mos6502};
 
-use ull65::processor::run::{RunConfig, RunPredicate};
 use ull65::Cpu;
+use ull65::processor::run::{RunConfig, RunPredicate};
 
 /// Custom CPU model that patches the stock MOS table.
 struct Trap6502;

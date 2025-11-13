@@ -19,7 +19,7 @@ pub struct Instruction<B: Bus> {
 pub struct InstructionTable<B: Bus>([Instruction<B>; 256]);
 
 impl<B: Bus> InstructionTable<B> {
-    #[must_use] 
+    #[must_use]
     pub const fn with(mut self, opcode: u8, instruction: Instruction<B>) -> Self {
         self.0[opcode as usize] = instruction;
         self

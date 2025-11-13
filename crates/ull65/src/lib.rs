@@ -71,9 +71,9 @@ pub mod processor;
 pub use processor::addressing_mode::{self, AddressingMode};
 pub use processor::run::{RunConfig, RunOutcome, RunPredicate, RunSummary};
 pub use processor::{
+    Cpu, RunState,
     cpu::{
         IRQ_VECTOR_HI, IRQ_VECTOR_LO, NMI_VECTOR_HI, NMI_VECTOR_LO, RESET_VECTOR_HI,
         RESET_VECTOR_LO, STACK_SPACE_START,
-    }, Cpu,
-    RunState,
+    },
 };

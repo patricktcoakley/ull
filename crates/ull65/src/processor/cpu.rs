@@ -125,7 +125,7 @@ impl<B: Bus + 'static> Cpu<B> {
     ///
     /// let cpu: Cpu<SimpleBus> = Cpu::with_instruction_set::<Mos6502>();
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn with_instruction_set<S: InstructionSet>() -> Self {
         Self {
             a: byte!(0),
@@ -315,10 +315,11 @@ impl<B: Bus + 'static> Cpu<B> {
 
         loop {
             if let Some(limit) = instruction_limit
-                && summary.instructions_executed >= limit {
-                    summary.mark(RunOutcome::HitInstructionLimit);
-                    break;
-                }
+                && summary.instructions_executed >= limit
+            {
+                summary.mark(RunOutcome::HitInstructionLimit);
+                break;
+            }
 
             let cycles = self.tick(bus);
             if cycles == 0 {
@@ -335,10 +336,11 @@ impl<B: Bus + 'static> Cpu<B> {
             }
 
             if let Some(predicate_cb) = predicate.as_mut()
-                && predicate_cb.should_stop(self, bus) {
-                    summary.mark(RunOutcome::HitPredicate);
-                    break;
-                }
+                && predicate_cb.should_stop(self, bus)
+            {
+                summary.mark(RunOutcome::HitPredicate);
+                break;
+            }
         }
 
         summary
@@ -367,7 +369,7 @@ impl<B: Bus + 'static> Cpu<B> {
     /// Some instruction take an extra cycle when crossing page boundaries (when the
     /// high byte changes). This is used internally for cycle-accurate timing.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn crosses_page(&self, from: Word, to: Word) -> bool {
         from.hi() != to.hi()
     }
@@ -405,7 +407,7 @@ impl<B: Bus + 'static> Cpu<B> {
     }
 
     /// Cycles consumed by the most recent [`step`](Self::step) call.
-    #[must_use] 
+    #[must_use]
     pub fn last_step_cycles(&self) -> u8 {
         self.last_step_cycles
     }

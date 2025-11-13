@@ -43,7 +43,7 @@ pub enum AccessType {
 
 impl AccessType {
     /// Returns `true` if this access reads from the bus.
-    #[must_use] 
+    #[must_use]
     pub const fn is_read(self) -> bool {
         matches!(
             self,
@@ -57,7 +57,7 @@ impl AccessType {
     }
 
     /// Returns `true` if this access writes to the bus.
-    #[must_use] 
+    #[must_use]
     pub const fn is_write(self) -> bool {
         matches!(
             self,
@@ -66,7 +66,7 @@ impl AccessType {
     }
 
     /// Convenience helper to derive a [`Phase`] from the access type.
-    #[must_use] 
+    #[must_use]
     pub const fn phase(self) -> Phase {
         if self.is_write() {
             Phase::Write
@@ -75,7 +75,6 @@ impl AccessType {
         }
     }
 }
-
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DmaRequest {

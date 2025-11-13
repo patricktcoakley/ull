@@ -34,25 +34,25 @@ impl RunSummary {
     }
 
     /// Returns `true` if execution halted because a BRK was executed.
-    #[must_use] 
+    #[must_use]
     pub fn hit_brk(&self) -> bool {
         self.outcome == RunOutcome::HitBrk
     }
 
     /// Returns `true` if the user predicate stopped execution.
-    #[must_use] 
+    #[must_use]
     pub fn hit_predicate(&self) -> bool {
         self.outcome == RunOutcome::HitPredicate
     }
 
     /// Returns `true` if execution reached the configured instruction limit.
-    #[must_use] 
+    #[must_use]
     pub fn hit_instruction_limit(&self) -> bool {
         self.outcome == RunOutcome::HitInstructionLimit
     }
 
     /// Returns `true` if the CPU stalled (e.g., waiting, halted).
-    #[must_use] 
+    #[must_use]
     pub fn stalled(&self) -> bool {
         self.outcome == RunOutcome::Stalled
     }

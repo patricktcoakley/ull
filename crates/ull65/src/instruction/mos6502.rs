@@ -2,17 +2,17 @@
 
 use crate::instruction::{Instruction, InstructionSet, InstructionTable};
 use crate::processor::addressing_mode::{
-    Absolute, AbsoluteIndirect, AbsoluteX, AbsoluteY, AddressingMode, Immediate, ZeroPage, ZeroPageIndirectY,
-    ZeroPageX, ZeroPageXIndirect, ZeroPageY,
+    Absolute, AbsoluteIndirect, AbsoluteX, AbsoluteY, AddressingMode, Immediate, ZeroPage,
+    ZeroPageIndirectY, ZeroPageX, ZeroPageXIndirect, ZeroPageY,
 };
 use crate::processor::flags::Flags;
-use crate::{byte, nibble::Nibble, word, AccessType, Bus, Byte, Cpu};
-use crate::{RunState, IRQ_VECTOR_HI, IRQ_VECTOR_LO};
+use crate::{AccessType, Bus, Byte, Cpu, byte, nibble::Nibble, word};
+use crate::{IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
 
 pub struct Mos6502;
 
 impl Mos6502 {
-    #[must_use] 
+    #[must_use]
     pub const fn base_table<B: Bus + 'static>() -> InstructionTable<B> {
         InstructionTable([
             // 0x00

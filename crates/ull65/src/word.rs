@@ -55,14 +55,14 @@ impl Word {
 
     /// Returns the low byte (bits 0-7).
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn lo(self) -> Byte {
         Byte::from((self.0 & 0x00FF) as u8)
     }
 
     /// Returns the high byte (bits 8-15).
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn hi(self) -> Byte {
         Byte::from((self.0 >> 8) as u8)
     }
@@ -71,14 +71,14 @@ impl Word {
     ///
     /// Useful for little-endian byte operations.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn lo_hi(self) -> (Byte, Byte) {
         (self.lo(), self.hi())
     }
 
     /// Converts to `usize` for array indexing.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
