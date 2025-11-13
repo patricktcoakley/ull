@@ -1,0 +1,18 @@
+[package]
+name = "ull65"
+description = "ull65 is a no_std CPU emulator for the MOS 6502 and WDC 65C02."
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+repository = "https://github.com/patricktcoakley/ull"
+homepage = "https://github.com/patricktcoakley/ull"
+documentation = "https://docs.rs/ull65"
+readme = "README.md"
+keywords = ["6502", "emulator", "cpu", "nostd", "apple", "nes"]
+categories = ["emulators"]
+
+[dependencies]
+bitflags.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true
