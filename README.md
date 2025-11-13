@@ -1,22 +1,18 @@
 # úll
 
 úll (Irish for 🍎and written as `ull` when referring to the code) is a family of Rust crates aimed at emulating machines
-built around the MOS 6502 lineage. The long-term goal is to successfully emulate various models of Apple computers,
-including the Apple II, as well as be usable for emulating other 6502-based systems, such as the NES, Atari 800, and
-Commodore 64.
-
-## Workspace layout
-
-- [`crates/ull65`](crates/ull65) – A `no_std` 6502/65C02 CPU core with pluggable buses and instruction sets.
+built around the MOS 6502 lineage. The long-term goal is to successfully emulate various models of 8-bit Apple
+computers, including the Apple II, as well as be suitable for emulating other 6502-based systems, such as the NES, Atari
+800, and Commodore 64.
 
 ## Getting started
 
 ### `ull65`
 
-`ull65` has [its own README](crates/ull65/README.md) and ships with runnable snippets that demonstrate the CPU core in
-action.
+[`ull65`](crates/ull65) is a `no_std` 6502/65C02 CPU core with pluggable buses and instruction sets. More info can be
+found in [the README](crates/ull65/README.md).
 
-Each example can be launched with `cargo run -p ull65 --example <name>`.
+Examples can be run using `cargo run -p ull65 --example <name>`.
 
 - [`hello_world.rs`](crates/ull65/examples/hello_world.rs) copies
   `"Hello, World!"` into zero-page RAM, halts on `BRK`, then inspects memory.
@@ -33,4 +29,14 @@ Each example can be launched with `cargo run -p ull65 --example <name>`.
   alongside a bus that keeps DMA bursts in sync with instruction timing.
   ```
   cargo run -p ull65 --example dma_loop
+  ```
+- [`apple1.rs`](crates/ull65/examples/apple1.rs) wires the core up to a minimal
+  Apple I bus so you can boot WOZMON and interact over the terminal to run BASIC.
+  ```
+  cargo run -p ull65 --example apple1
+  ```
+- [`nestest.rs`](crates/ull65/examples/nestest.rs) runs the well-known NES CPU
+  validation ROM using a Ricoh 2A03-style instruction set with a minimal NES bus.
+  ```
+  cargo run -p ull65 --example nestest
   ```

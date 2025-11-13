@@ -8,17 +8,17 @@ The primary goal of `ull65` is to be easy to use and extend, with a secondary fo
 cycle-accurate. To that end, the public API is mostly focused on ergonomics for the end-user, with a few key
 features that make it easy to customize the core for specific use cases:
 
-1. **Pluggable buses**
+- **Pluggable buses**
     - the `Bus` trait to controls how memory and
       peripherals respond to reads, writes, DMA, and clock ticks, allowing for swappable
       memory models (ROM, RAM, etc.) and custom peripheral implementations (PPU, APU,
       etc.) without rewriting the core.
-2. **Instruction-sets**
+- **Instruction-sets**
     - swap or patch opcode tables with the `InstructionSet` trait instead of duplicating the CPU core for each variant,
       making it easy to implement new CPU cores without much effort.
-3. **Deterministic stepping**
-   – drive the CPU with `run`, `run_until`, or single-cycle `tick` calls and keep DMA/peripheral time in lockstep with
-   the processor.
+- **Deterministic stepping**
+    - drive the CPU with `run`, `run_until`, or single-cycle `tick` calls and keep DMA/peripheral time in lockstep with
+      the processor.
 
 ## Architecture overview
 
@@ -27,9 +27,7 @@ features that make it easy to customize the core for specific use cases:
 - `Cpu<B>` is the core execution engine parameterized over a `Bus`
   implementation. It owns the registers/flags, exposes helpers like
   `with_program`, `with_reset_vector`, `run`, `run_until`, and single-cycle
-  `tick`, and keeps track of elapsed cycles. We keep the bus generic so the Rust compiler can
-  [monomorphize](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) these calls, which is important
-  for supporting `no_std`.
+  `tick`, and keeps track of elapsed cycles.
 - `Bus` is a trait you implement to wire memory and peripherals. The CPU uses it
   for every instruction fetch/data access plus timing hooks:
     - `read`/`write` for memory accesses
@@ -140,8 +138,7 @@ impl InstructionSet for MyCustomCpu {
 }
 ```
 
-Here we keep the MOS behavior and only replace `BRK` with a
-custom trap handler.
+Here we keep the MOS behavior and only replace `BRK` with a custom trap handler.
 
 ## Examples
 
