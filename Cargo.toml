@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/ull65",
+    "crates/ull65", "crates/ull",
 ]
 resolver = "3"
 
@@ -8,8 +8,11 @@ resolver = "3"
 bitflags = { version = "2.10.0", default-features = false }
 log = { version = "0.4", default-features = false }
 env_logger = { version = "0.11.8", default-features = false }
+ull = { version = "0.1.0", path = "crates/ull" }
 
 [workspace.package]
 license = "MIT"
 license-file = "LICENSE"
 edition = "2024"
+repository = "https://github.com/patricktcoakley/ull"
+homepage = "https://github.com/patricktcoakley/ull"

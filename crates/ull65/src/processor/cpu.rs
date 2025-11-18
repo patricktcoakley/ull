@@ -1,12 +1,11 @@
 //! 6502 CPU implementation with registers and execution loop.
 
-use crate::byte::Byte;
 use crate::instruction::{InstructionSet, InstructionTable, mos6502::Mos6502};
 use crate::processor::flags::Flags;
 use crate::processor::run::{RunConfig, RunOutcome, RunSummary};
-use crate::word::Word;
-use crate::{AccessType, Bus, byte, word};
 use core::fmt;
+use ull::{AccessType, Bus, Byte, Word};
+use ull::{byte, word};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Interrupt {
@@ -43,7 +42,9 @@ pub const STACK_SPACE_START: Word = Word(0x0100);
 /// # Examples
 ///
 /// ```
-/// use ull65::{AccessType, Bus, Cpu, Word, RESET_VECTOR_HI, RESET_VECTOR_LO, bus::SimpleBus, instruction::mos6502::Mos6502};
+/// use ull::{AccessType, Bus, SimpleBus, Word};
+/// use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
+/// use ull65::instruction::mos6502::Mos6502;
 ///
 /// // Create CPU with MOS 6502 instruction set
 /// let mut cpu: Cpu<SimpleBus> = Cpu::with_instruction_set::<Mos6502>();
@@ -121,7 +122,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull65::{AccessType, Bus, Cpu, Word, RESET_VECTOR_HI, RESET_VECTOR_LO, bus::SimpleBus, instruction::mos6502::Mos6502};
+    /// use ull::SimpleBus;
+    /// use ull65::instruction::mos6502::Mos6502;
+    /// use ull65::Cpu;
     ///
     /// let cpu: Cpu<SimpleBus> = Cpu::with_instruction_set::<Mos6502>();
     /// ```
@@ -150,7 +153,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull65::{Cpu, Word, bus::SimpleBus, instruction::mos6502::Mos6502};
+    /// use ull::{SimpleBus, Word};
+    /// use ull65::instruction::mos6502::Mos6502;
+    /// use ull65::Cpu;
     ///
     /// let mut bus = SimpleBus::default();
     /// let cpu: Cpu<SimpleBus> = Cpu::with_reset_vector::<Mos6502>(&mut bus, Word(0x9000));
@@ -168,7 +173,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull65::{Cpu, Word, bus::SimpleBus, instruction::mos6502::Mos6502};
+    /// use ull::{SimpleBus, Word};
+    /// use ull65::instruction::mos6502::Mos6502;
+    /// use ull65::Cpu;
     ///
     /// let mut bus = SimpleBus::default();
     /// let program = [0xEA, 0x00]; // NOP; BRK
@@ -194,7 +201,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull65::{AccessType, Bus, Cpu, Word, RESET_VECTOR_HI, RESET_VECTOR_LO, bus::SimpleBus, instruction::mos6502::Mos6502};
+    /// use ull::{AccessType, Bus, SimpleBus, Word};
+    /// use ull65::instruction::mos6502::Mos6502;
+    /// use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
     ///
     /// let mut cpu: Cpu<SimpleBus> = Cpu::default();
     /// let mut bus = SimpleBus::default();
@@ -230,7 +239,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull65::{AccessType, Bus, Cpu, Word, bus::SimpleBus, instruction::mos6502::Mos6502};
+    /// use ull::{AccessType, Bus, SimpleBus, Word};
+    /// use ull65::instruction::mos6502::Mos6502;
+    /// use ull65::Cpu;
     ///
     /// let mut cpu: Cpu<SimpleBus> = Cpu::default();
     /// let mut bus = SimpleBus::default();
@@ -424,9 +435,9 @@ mod tests {
     extern crate alloc;
 
     use super::*;
-    use crate::bus::{AccessType, Bus, TestingBus};
     use crate::instruction::mos6502::Mos6502;
     use crate::processor::run::RunPredicate;
+    use ull::{AccessType, Bus, TestingBus};
 
     fn prepare_cpu(bus: &mut TestingBus) -> Cpu<TestingBus> {
         bus.write(RESET_VECTOR_LO, byte!(0x00), AccessType::DataWrite);

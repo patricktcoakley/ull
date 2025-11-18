@@ -9,10 +9,8 @@ cycle-accurate. To that end, the public API is mostly focused on ergonomics for 
 features that make it easy to customize the core for specific use cases:
 
 - **Pluggable buses**
-    - the `Bus` trait to controls how memory and
-      peripherals respond to reads, writes, DMA, and clock ticks, allowing for swappable
-      memory models (ROM, RAM, etc.) and custom peripheral implementations (PPU, APU,
-      etc.) without rewriting the core.
+    - `ull65` leverages the [`ull::Bus`](../ull/README.md) abstraction, so memory maps and peripherals live in your bus
+      implementation in a consistent API across all systems.
 - **Instruction-sets**
     - swap or patch opcode tables with the `InstructionSet` trait instead of duplicating the CPU core for each variant,
       making it easy to implement new CPU cores without much effort.
@@ -70,10 +68,10 @@ The general workflow for `ull65` is:
    DMA callbacks.
 
 ```rust
-use ull65::{AccessType, Cpu, Word};
-use ull65::bus::SimpleBus;
+use ull::{AccessType, SimpleBus, Word};
 use ull65::instruction::mos6502::Mos6502;
 use ull65::processor::run::RunConfig;
+use ull65::Cpu;
 
 fn main() {
     let mut bus = SimpleBus::default();

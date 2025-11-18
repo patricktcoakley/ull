@@ -6,8 +6,8 @@
 use std::collections::VecDeque;
 use std::io::{self, Write};
 
-use ull65::bus::{AccessType, Bus};
-use ull65::{Byte, Cpu, IRQ_VECTOR_LO, NMI_VECTOR_LO, RESET_VECTOR_LO, Word};
+use ull::{AccessType, Bus, Byte, Word};
+use ull65::{Cpu, IRQ_VECTOR_LO, NMI_VECTOR_LO, RESET_VECTOR_LO};
 
 const MEMORY_SIZE: usize = 0x10000;
 const BASIC_START: usize = 0xE000;

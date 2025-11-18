@@ -1,4 +1,5 @@
-use crate::{Bus, Cpu};
+use crate::Cpu;
+use ull::Bus;
 
 /// Reason why [`Cpu::run_until`](crate::processor::cpu::Cpu::run_until) stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

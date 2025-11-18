@@ -6,8 +6,9 @@ use crate::processor::addressing_mode::{
     ZeroPageIndirectY, ZeroPageX, ZeroPageXIndirect, ZeroPageY,
 };
 use crate::processor::flags::Flags;
-use crate::{AccessType, Bus, Byte, Cpu, byte, nibble::Nibble, word};
-use crate::{IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
+use crate::{Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
+use ull::{AccessType, Bus, Byte, Nibble};
+use ull::{byte, word};
 
 pub struct Mos6502;
 
@@ -2191,12 +2192,11 @@ pub fn illegal_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bus::SimpleBus;
     use crate::processor::addressing_mode::{
         Absolute, AbsoluteIndirect, AbsoluteX, AbsoluteY, Immediate, ZeroPage, ZeroPageIndirectY,
         ZeroPageX, ZeroPageY,
     };
-    use crate::word::Word;
+    use ull::{SimpleBus, Word};
 
     #[test]
     fn test_lda_immediate() {

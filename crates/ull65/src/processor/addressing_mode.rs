@@ -4,8 +4,8 @@
 //! instruction with compile-time dispatch.
 
 use crate::processor::Cpu;
-use crate::word::Word;
-use crate::{AccessType, Bus, word};
+use ull::word;
+use ull::{AccessType, Bus, Word};
 
 /// Trait for computing effective addresses in different addressing modes.
 ///

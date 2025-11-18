@@ -3,7 +3,7 @@
 //! # Examples
 //!
 //! ```
-//! use ull65::Byte;
+//! use ull::Byte;
 //!
 //! // Addition wraps like 6502 hardware
 //! assert_eq!(Byte(0xFF) + 1, Byte(0x00));
@@ -13,7 +13,6 @@
 //! ```
 
 use crate::nibble::Nibble;
-use crate::processor::flags::Flags;
 use core::fmt::{Display, Formatter, LowerHex, UpperHex};
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl,
@@ -42,7 +41,7 @@ impl Byte {
     #[inline]
     #[must_use]
     pub fn is_signed(self) -> bool {
-        self.0 & Flags::Sign.bits() != 0
+        self.0 & 0x80 != 0
     }
 
     /// Converts to `usize` for indexing.

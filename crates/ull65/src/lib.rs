@@ -18,7 +18,8 @@
 //! # Quick Start
 //!
 //! ```
-//! use ull65::{Byte, Cpu, Word, bus::SimpleBus, instruction::mos6502::Mos6502};
+//! use ull::{Byte, SimpleBus, Word};
+//! use ull65::{Cpu, instruction::mos6502::Mos6502};
 //!
 //! let mut bus = SimpleBus::default();
 //! let program = [0xA9, 0x42, 0x00]; // LDA #$42; BRK
@@ -57,16 +58,17 @@
 
 extern crate alloc;
 
-pub mod byte;
-pub use byte::Byte;
-pub mod word;
-pub use word::Word;
-pub mod bus;
-pub use bus::{AccessType, Bus, DmaRequest, DmaResult};
 pub mod instruction;
-pub mod nibble;
-pub use nibble::Nibble;
 pub mod processor;
+
+/// Re-export core primitives/bus for convenience so downstream users can depend on `ull65`
+/// only, while internal modules still import them explicitly from `ull`.
+pub use ull::bus::{
+    self as bus, AccessType, Bus, DmaRequest, DmaResult, Phase, SimpleBus, TestingBus,
+};
+pub use ull::byte::{self as byte, Byte};
+pub use ull::nibble::{self as nibble, Nibble};
+pub use ull::word::{self as word, Word};
 
 pub use processor::addressing_mode::{self, AddressingMode};
 pub use processor::run::{RunConfig, RunOutcome, RunPredicate, RunSummary};

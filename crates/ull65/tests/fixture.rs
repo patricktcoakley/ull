@@ -1,6 +1,7 @@
-use ull65::bus::{Bus, SimpleBus};
+use ull::bus::SimpleBus;
+use ull::{AccessType, Bus, Word};
+use ull65::Cpu;
 use ull65::instruction::{InstructionSet, mos6502::Mos6502};
-use ull65::{AccessType, Cpu, Word};
 
 const MAX_STEPS: u64 = 50_000_000;
 const LOOP_THRESHOLD: u32 = 10;

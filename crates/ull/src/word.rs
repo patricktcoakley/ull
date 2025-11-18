@@ -3,7 +3,7 @@
 //! # Examples
 //!
 //! ```
-//! use ull65::Word;
+//! use ull::Word;
 //!
 //! let addr = Word(0x8000);
 //! assert_eq!(addr + 2, Word(0x8002));
@@ -33,14 +33,14 @@ pub struct Word(pub u16);
 /// # Examples
 ///
 /// ```
-/// use ull65::word;
+/// use ull::word;
 ///
 /// let addr = word!(0x8000);
-/// assert_eq!(addr, ull65::Word(0x8000));
+/// assert_eq!(addr, ull::Word(0x8000));
 ///
 /// // Also works with byte tuples (little-endian)
 /// let addr = word!((0x00u8, 0x80u8));
-/// assert_eq!(addr, ull65::Word(0x8000));
+/// assert_eq!(addr, ull::Word(0x8000));
 /// ```
 #[macro_export]
 macro_rules! word {

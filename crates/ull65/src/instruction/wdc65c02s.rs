@@ -1,6 +1,5 @@
 //! The WDC 65C02 instruction set implementation.
 
-use crate::byte::Byte;
 use crate::instruction::mos6502::{Mos6502, illegal, illegal_a};
 use crate::instruction::{Instruction, InstructionSet, InstructionTable};
 use crate::processor::addressing_mode::{
@@ -8,8 +7,8 @@ use crate::processor::addressing_mode::{
     ZeroPageIndirect, ZeroPageX,
 };
 use crate::processor::flags::Flags;
-use crate::word::Word;
-use crate::{AccessType, AddressingMode, Bus, Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState, word};
+use crate::{AddressingMode, Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
+use ull::{AccessType, Bus, Byte, Word, word};
 
 pub struct Wdc65c02s;
 
@@ -1063,11 +1062,11 @@ fn modify_zero_page_bit<const BIT: u8, const SET_BIT: bool, B: Bus + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bus::SimpleBus;
     use crate::processor::addressing_mode::{AbsoluteX, Immediate, ZeroPage};
     use crate::processor::flags::Flags;
     use crate::{RunState, STACK_SPACE_START};
-    use crate::{byte, word};
+    use ull::SimpleBus;
+    use ull::{byte, word};
 
     #[test]
     fn test_bra_branches_forward() {

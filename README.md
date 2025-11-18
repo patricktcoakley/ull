@@ -1,11 +1,16 @@
 # úll
 
-úll (Irish for 🍎and written as `ull` when referring to the code) is a family of Rust crates aimed at emulating machines
-built around the MOS 6502 lineage. The long-term goal is to successfully emulate various models of 8-bit Apple
-computers, including the Apple II, as well as be suitable for emulating other 6502-based systems, such as the NES, Atari
-800, and Commodore 64.
+úll (Irish for 🍎 and written as `ull` when referring to the code) is a family of Rust crates currently aimed at
+emulating 8-bit machines, including the MOS 6502 and its offshoots. The primary focus at this stage of development is
+the 6502-based Apple II systems, but it would be a long-term goal to also include Z80-based systems as well, all with a
+cohesive API that shares common abstractions.
 
 ## Getting started
+
+### `ull`
+
+[`ull`](crates/ull) is a `no_std` base crate that hosts the shared primitives (`Nibble`, `Byte`, `Word`) plus the
+[`Bus` trait and sample buses](crates/ull/README.md).
 
 ### `ull65`
 

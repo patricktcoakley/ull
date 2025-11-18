@@ -6,9 +6,9 @@
 //! the bus clock and draining DMA so elapsed time stays in sync.
 
 use std::collections::VecDeque;
-use ull65::bus::Bus;
+use ull::{AccessType, Bus, Byte, DmaRequest, DmaResult, Word};
+use ull65::Cpu;
 use ull65::instruction::mos6502::Mos6502;
-use ull65::{AccessType, Byte, Cpu, DmaRequest, DmaResult, Word};
 
 const DMA_TRIGGER_ADDR: u16 = 0xD002;
 const DMA_LENGTH: u8 = 8;

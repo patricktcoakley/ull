@@ -1,0 +1,11 @@
+[package]
+name = "ull"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/ull"
+readme = "README.md"
+keywords = ["6502", "emulator", "cpu", "nostd", "apple"]
+categories = ["emulators"]

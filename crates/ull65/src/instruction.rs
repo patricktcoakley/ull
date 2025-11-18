@@ -2,8 +2,9 @@
 //!
 //! Implement [`InstructionSet`] to define CPU variants or patch existing tables
 
-use crate::{Bus, Cpu};
+use crate::Cpu;
 use core::ops::Index;
+use ull::Bus;
 
 pub mod mos6502;
 pub mod wdc65c02s;
@@ -42,8 +43,9 @@ impl<B: Bus> Index<usize> for InstructionTable<B> {
 /// # Examples
 ///
 /// ```
-/// use ull65::instruction::{InstructionSet, Instruction, InstructionTable};
-/// use ull65::{Bus, Cpu};
+/// use ull::Bus;
+/// use ull65::instruction::{Instruction, InstructionSet, InstructionTable};
+/// use ull65::Cpu;
 ///
 /// struct Custom6502;
 ///

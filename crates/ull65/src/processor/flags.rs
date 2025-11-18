@@ -3,9 +3,9 @@
 //! The 6502 status register contains 8 condition code and control bits:
 //! Carry, Zero, Interrupt Disable, Decimal Mode, Break, Expansion, Overflow, and Sign.
 
-use crate::byte::Byte;
 use bitflags::bitflags;
 use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use ull::Byte;
 
 bitflags! {
     /// Processor status register (P register).

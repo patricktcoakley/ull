@@ -6,10 +6,10 @@
 use std::fs;
 use std::path::Path;
 
-use ull65::bus::Bus;
+use ull::{AccessType, Bus, Byte, Word};
 use ull65::instruction::mos6502::Mos6502;
 use ull65::instruction::{InstructionSet, InstructionTable};
-use ull65::{AccessType, Byte, Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO, Word};
+use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
 
 /// Minimal NES memory map that satisfies nestest.
 struct NesBus {

@@ -3,8 +3,7 @@
 //! `BRK` opcode (0x00) with a custom handler that traps into our code
 //! instead of invoking the IRQ vector.
 
-use ull65::Word;
-use ull65::bus::{Bus, SimpleBus};
+use ull::{Bus, SimpleBus, Word};
 use ull65::instruction::{Instruction, InstructionSet, mos6502::Mos6502};
 
 use ull65::Cpu;

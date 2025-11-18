@@ -1,8 +1,7 @@
 //! Basic 64KB flat memory implementation.
 
 use crate::bus::AccessType;
-use crate::word::Word;
-use crate::{Bus, Byte};
+use crate::{Bus, Byte, Word};
 use alloc::{boxed::Box, vec};
 
 /// Simple 64KB flat memory implementation.
@@ -10,18 +9,6 @@ use alloc::{boxed::Box, vec};
 /// Provides a basic, contiguous 64KB memory space (0x0000-0xFFFF) with no banking
 /// or special behavior. This is the simplest [`Bus`] implementation and
 /// is suitable for testing or bootstrapping a very basic system.
-///
-/// # Examples
-///
-/// ```
-/// use ull65::bus::SimpleBus;
-/// use ull65::{AccessType, Bus, Byte, Word};
-///
-/// let mut bus = SimpleBus::default();
-///
-/// // Load data at a specific address
-/// bus.write_block(Word(0x8000), &[0xA9, 0x42], AccessType::DataWrite);
-/// ```
 #[derive(Debug)]
 pub struct SimpleBus {
     mem: Box<[u8]>,

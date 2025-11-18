@@ -1,6 +1,8 @@
 use std::string::String;
+use ull::{AccessType, Bus, Byte, SimpleBus, Word};
+use ull65::Cpu;
+use ull65::instruction::mos6502::Mos6502;
 use ull65::processor::run::RunConfig;
-use ull65::{AccessType, Bus, Byte, Cpu, Word, bus::SimpleBus, instruction::mos6502::Mos6502};
 
 const PROGRAM_START: Word = Word(0x8000);
 const TEXT_ADDR: u16 = 0x0200;
