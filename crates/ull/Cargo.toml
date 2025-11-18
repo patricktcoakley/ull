@@ -1,5 +1,6 @@
 [package]
 name = "ull"
+description = "Provides core primitives for the ull emulation project."
 version = "0.1.0"
 license.workspace = true
 edition.workspace = true
