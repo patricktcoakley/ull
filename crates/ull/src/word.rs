@@ -13,7 +13,7 @@
 //! assert_eq!(addr.hi().0, 0x80);
 //! ```
 
-use crate::byte::Byte;
+use crate::{Address, byte::Byte, nibble::Nibble};
 use core::fmt::{LowerHex, UpperHex};
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl,
@@ -68,19 +68,10 @@ impl Word {
     }
 
     /// Returns both bytes as (low, high) tuple.
-    ///
-    /// Useful for little-endian byte operations.
     #[inline]
     #[must_use]
     pub fn lo_hi(self) -> (Byte, Byte) {
         (self.lo(), self.hi())
-    }
-
-    /// Converts to `usize` for array indexing.
-    #[inline]
-    #[must_use]
-    pub const fn as_usize(self) -> usize {
-        self.0 as usize
     }
 }
 
@@ -92,7 +83,7 @@ impl From<(u8, u8)> for Word {
 
 impl From<(Byte, Byte)> for Word {
     fn from((lo, hi): (Byte, Byte)) -> Self {
-        Word(((u16::from(hi)) << 8) | u16::from(lo))
+        Word(((hi.as_u16()) << 8) | lo.as_u16())
     }
 }
 
@@ -105,7 +96,7 @@ impl From<Word> for (Byte, Byte) {
 impl From<Word> for (u8, u8) {
     fn from(value: Word) -> Self {
         let (lo, hi) = value.lo_hi();
-        (u8::from(lo), u8::from(hi))
+        (lo.as_u8(), hi.as_u8())
     }
 }
 
@@ -163,6 +154,12 @@ impl From<Word> for usize {
     }
 }
 
+impl From<usize> for Word {
+    fn from(value: usize) -> Self {
+        Word((value & 0xFFFF) as u16)
+    }
+}
+
 impl From<u8> for Word {
     fn from(value: u8) -> Self {
         Word(u16::from(value))
@@ -171,7 +168,13 @@ impl From<u8> for Word {
 
 impl From<Byte> for Word {
     fn from(value: Byte) -> Self {
-        Word(u16::from(value))
+        Word(value.as_u16())
+    }
+}
+
+impl From<Nibble> for Word {
+    fn from(value: Nibble) -> Self {
+        Word(value.as_u16())
     }
 }
 
@@ -195,6 +198,14 @@ impl Add<u16> for Word {
     }
 }
 
+impl Add<usize> for Word {
+    type Output = Word;
+
+    fn add(self, rhs: usize) -> Word {
+        Word(self.0.wrapping_add(rhs as u16))
+    }
+}
+
 impl AddAssign<u16> for Word {
     fn add_assign(&mut self, rhs: u16) {
         self.0 = self.0.wrapping_add(rhs);
@@ -205,13 +216,13 @@ impl Add<Byte> for Word {
     type Output = Word;
 
     fn add(self, rhs: Byte) -> Word {
-        Word(self.0.wrapping_add(u16::from(rhs)))
+        Word(self.0.wrapping_add(rhs.as_u16()))
     }
 }
 
 impl AddAssign<Byte> for Word {
     fn add_assign(&mut self, rhs: Byte) {
-        self.0 = self.0.wrapping_add(u16::from(rhs));
+        self.0 = self.0.wrapping_add(rhs.as_u16());
     }
 }
 
@@ -273,6 +284,14 @@ impl Sub<u16> for Word {
     }
 }
 
+impl Sub<usize> for Word {
+    type Output = Word;
+
+    fn sub(self, rhs: usize) -> Word {
+        Word(self.0.wrapping_sub(rhs as u16))
+    }
+}
+
 impl SubAssign<u16> for Word {
     fn sub_assign(&mut self, rhs: u16) {
         self.0 = self.0.wrapping_sub(rhs);
@@ -283,13 +302,13 @@ impl Sub<Byte> for Word {
     type Output = Word;
 
     fn sub(self, rhs: Byte) -> Word {
-        Word(self.0.wrapping_sub(u16::from(rhs)))
+        Word(self.0.wrapping_sub(rhs.as_u16()))
     }
 }
 
 impl SubAssign<Byte> for Word {
     fn sub_assign(&mut self, rhs: Byte) {
-        self.0 = self.0.wrapping_sub(u16::from(rhs));
+        self.0 = self.0.wrapping_sub(rhs.as_u16());
     }
 }
 
@@ -391,7 +410,7 @@ impl BitAnd<Byte> for Word {
     type Output = Word;
 
     fn bitand(self, rhs: Byte) -> Word {
-        Word(self.0 & u16::from(rhs))
+        Word(self.0 & rhs.as_u16())
     }
 }
 
@@ -417,7 +436,7 @@ impl BitAndAssign<Word> for Word {
 
 impl BitAndAssign<Byte> for Word {
     fn bitand_assign(&mut self, rhs: Byte) {
-        self.0 &= u16::from(rhs);
+        self.0 &= rhs.as_u16();
     }
 }
 
@@ -441,7 +460,7 @@ impl BitOr<Byte> for Word {
     type Output = Word;
 
     fn bitor(self, rhs: Byte) -> Word {
-        Word(self.0 | u16::from(rhs))
+        Word(self.0 | rhs.as_u16())
     }
 }
 
@@ -459,7 +478,7 @@ impl BitOrAssign<u16> for Word {
 
 impl BitOrAssign<Byte> for Word {
     fn bitor_assign(&mut self, rhs: Byte) {
-        self.0 |= u16::from(rhs);
+        self.0 |= rhs.as_u16();
     }
 }
 
@@ -483,7 +502,7 @@ impl BitXor<Byte> for Word {
     type Output = Word;
 
     fn bitxor(self, rhs: Byte) -> Word {
-        Word(self.0 ^ u16::from(rhs))
+        Word(self.0 ^ rhs.as_u16())
     }
 }
 
@@ -501,7 +520,7 @@ impl BitXorAssign<u16> for Word {
 
 impl BitXorAssign<Byte> for Word {
     fn bitxor_assign(&mut self, rhs: Byte) {
-        self.0 ^= u16::from(rhs);
+        self.0 ^= rhs.as_u16();
     }
 }
 

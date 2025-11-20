@@ -6,16 +6,17 @@
 use std::collections::VecDeque;
 use std::io::{self, Write};
 
-use ull::{AccessType, Bus, Byte, Word};
+use ull::{Address, Bus, Byte, Word};
+use ull65::AccessType;
 use ull65::{Cpu, IRQ_VECTOR_LO, NMI_VECTOR_LO, RESET_VECTOR_LO};
 
 const MEMORY_SIZE: usize = 0x10000;
-const BASIC_START: usize = 0xE000;
-const WOZMON_START: usize = 0xFF00;
+const BASIC_START: Word = Word(0xE000);
+const WOZMON_START: Word = Word(0xFF00);
 
-const KBD_DATA: u16 = 0xD010;
-const KBD_STATUS: u16 = 0xD011;
-const DISPLAY_DATA: u16 = 0xD012;
+const DISPLAY_DATA: Word = Word(0xD012);
+const KBD_DATA: Word = Word(0xD010);
+const KBD_STATUS: Word = Word(0xD011);
 
 const BASIC_ROM: &[u8] = include_bytes!("../../../thirdparty/applei/BASIC.ROM");
 const WOZMON_ROM: &[u8] = include_bytes!("../../../thirdparty/applei/WOZMON.ROM");
@@ -46,32 +47,32 @@ impl Apple1Bus {
     }
 
     fn load_basic(&mut self) {
-        let end = BASIC_START + BASIC_ROM.len();
-        self.mem[BASIC_START..end].copy_from_slice(BASIC_ROM);
-        for idx in BASIC_START..end {
+        let start = BASIC_START.as_usize();
+        let end = start + BASIC_ROM.len();
+        self.mem[start..end].copy_from_slice(BASIC_ROM);
+        for idx in start..end {
             self.rom_mask[idx] = true;
         }
     }
 
     fn load_wozmon(&mut self) {
-        let end = WOZMON_START + WOZMON_ROM.len();
-        self.mem[WOZMON_START..end].copy_from_slice(WOZMON_ROM);
-        for idx in WOZMON_START..end {
+        let start = WOZMON_START.as_usize();
+        let end = start + WOZMON_ROM.len();
+        self.mem[start..end].copy_from_slice(WOZMON_ROM);
+        for idx in start..end {
             self.rom_mask[idx] = true;
         }
 
-        let entry = u16::try_from(WOZMON_START).expect("WOZMON start fits in 16 bits");
-        self.write_vector(RESET_VECTOR_LO, entry);
-        self.write_vector(NMI_VECTOR_LO, entry);
-        self.write_vector(IRQ_VECTOR_LO, entry);
+        self.write_vector(RESET_VECTOR_LO, WOZMON_START);
+        self.write_vector(NMI_VECTOR_LO, WOZMON_START);
+        self.write_vector(IRQ_VECTOR_LO, WOZMON_START);
     }
 
-    fn write_vector(&mut self, addr: Word, value: u16) {
-        let lo = (value & 0x00FF) as u8;
-        let hi = (value >> 8) as u8;
+    fn write_vector(&mut self, addr: Word, value: Word) {
+        let (lo, hi) = value.lo_hi();
         let idx = addr.as_usize();
-        self.mem[idx] = lo;
-        self.mem[idx + 1] = hi;
+        self.mem[idx] = lo.as_u8();
+        self.mem[idx + 1] = hi.as_u8();
         self.rom_mask[idx] = true;
         self.rom_mask[idx + 1] = true;
     }
@@ -95,7 +96,7 @@ impl Apple1Bus {
         }
     }
 
-    fn read_keyboard(&mut self, addr: u16) -> Byte {
+    fn read_keyboard(&mut self, addr: Word) -> Byte {
         match addr {
             KBD_DATA => {
                 let mut value = self.keyboard_data;
@@ -110,10 +111,10 @@ impl Apple1Bus {
                 if self.keyboard_ready {
                     Byte(0x80)
                 } else {
-                    Byte(0x00)
+                    Byte::ZERO
                 }
             }
-            _ => Byte(0x00),
+            _ => Byte::ZERO,
         }
     }
 
@@ -141,25 +142,30 @@ impl Apple1Bus {
 }
 
 impl Bus for Apple1Bus {
+    type Access = AccessType;
+    type Data = Byte;
+
     fn read<A>(&mut self, addr: A, _access: AccessType) -> Byte
     where
-        A: Into<Word>,
+        A: Address,
     {
-        let addr = addr.into();
-        match addr.0 {
-            KBD_DATA | KBD_STATUS => self.read_keyboard(addr.0),
-            _ => Byte(self.mem[addr.as_usize()]),
+        let idx = addr.as_usize();
+        let addr_word = Word(addr.as_u16());
+        match addr_word {
+            KBD_DATA | KBD_STATUS => self.read_keyboard(addr_word),
+            _ => Byte(self.mem[idx]),
         }
     }
 
     fn write<A, V>(&mut self, addr: A, value: V, _access: AccessType)
     where
-        A: Into<Word>,
+        A: Address,
         V: Into<Byte>,
     {
-        let addr = addr.into();
-        let value = value.into();
-        match addr.0 {
+        let value: Byte = value.into();
+        let addr_word = Word(addr.as_u16());
+        let idx = addr.as_usize();
+        match addr_word {
             DISPLAY_DATA => self.write_display(value),
             KBD_STATUS => {
                 // Writing any value clears the ready flag on real hardware.
@@ -168,7 +174,6 @@ impl Bus for Apple1Bus {
             }
             KBD_DATA => {}
             _ => {
-                let idx = addr.as_usize();
                 if !self.rom_mask[idx] {
                     self.mem[idx] = value.0;
                 }

@@ -1,11 +1,13 @@
 //! 6502 CPU implementation with registers and execution loop.
 
-use crate::instruction::{InstructionSet, InstructionTable, mos6502::Mos6502};
+use crate::bus::Mos6502CompatibleBus;
+use crate::instruction::{mos6502::Mos6502, InstructionSet, InstructionTable};
 use crate::processor::flags::Flags;
 use crate::processor::run::{RunConfig, RunOutcome, RunSummary};
+use crate::{AccessType, ResetVectorExt};
 use core::fmt;
-use ull::{AccessType, Bus, Byte, Word};
 use ull::{byte, word};
+use ull::{Address, Byte, Word};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Interrupt {
@@ -37,13 +39,13 @@ pub const STACK_SPACE_START: Word = Word(0x0100);
 
 /// The 6502 CPU with registers and instruction table.
 ///
-/// Maintains the CPU state over a generic [`Bus`] implementation to allow custom memory/I/O.
+/// Maintains the CPU state over a generic [`Mos6502CompatibleBus`] implementation to allow custom memory/I/O.
 ///
 /// # Examples
 ///
 /// ```
-/// use ull::{AccessType, Bus, SimpleBus, Word};
-/// use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
+/// use ull::{Bus, Word};
+/// use ull65::{AccessType, Cpu, SimpleBus, RESET_VECTOR_HI, RESET_VECTOR_LO};
 /// use ull65::instruction::mos6502::Mos6502;
 ///
 /// // Create CPU with MOS 6502 instruction set
@@ -59,11 +61,11 @@ pub const STACK_SPACE_START: Word = Word(0x0100);
 /// assert_eq!(cpu.pc, Word(0x8000));
 ///
 /// // Execute instruction
-/// bus.write_block(0x8000u16, &[0xA9, 0x42], AccessType::DataWrite); // LDA #$42
+/// bus.write_block(Word(0x8000), &[0xA9, 0x42], AccessType::DataWrite); // LDA #$42
 /// cpu.tick(&mut bus);
 /// assert_eq!(cpu.a.0, 0x42);
 /// ```
-pub struct Cpu<B: Bus> {
+pub struct Cpu<B: Mos6502CompatibleBus> {
     /// Accumulator register.
     pub a: Byte,
     /// X index register.
@@ -89,7 +91,7 @@ pub struct Cpu<B: Bus> {
     reset_pending: bool,
 }
 
-impl<B: Bus> fmt::Debug for Cpu<B> {
+impl<B: Mos6502CompatibleBus> fmt::Debug for Cpu<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Here only because the jump table is too noisy
         f.debug_struct("Cpu")
@@ -110,7 +112,7 @@ impl<B: Bus> fmt::Debug for Cpu<B> {
     }
 }
 
-impl<B: Bus + 'static> Cpu<B> {
+impl<B: Mos6502CompatibleBus + 'static> Cpu<B> {
     /// Create a new CPU with the specified instruction set.
     ///
     /// Initializes all registers to their power-on state:
@@ -122,9 +124,8 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull::SimpleBus;
     /// use ull65::instruction::mos6502::Mos6502;
-    /// use ull65::Cpu;
+    /// use ull65::{AccessType, Cpu, SimpleBus};
     ///
     /// let cpu: Cpu<SimpleBus> = Cpu::with_instruction_set::<Mos6502>();
     /// ```
@@ -153,9 +154,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull::{SimpleBus, Word};
+    /// use ull::{Bus, Word};
+    /// use ull65::{AccessType, Cpu, SimpleBus};
     /// use ull65::instruction::mos6502::Mos6502;
-    /// use ull65::Cpu;
     ///
     /// let mut bus = SimpleBus::default();
     /// let cpu: Cpu<SimpleBus> = Cpu::with_reset_vector::<Mos6502>(&mut bus, Word(0x9000));
@@ -173,9 +174,9 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull::{SimpleBus, Word};
+    /// use ull::{Bus, Word};
+    /// use ull65::{AccessType, Cpu, SimpleBus};
     /// use ull65::instruction::mos6502::Mos6502;
-    /// use ull65::Cpu;
     ///
     /// let mut bus = SimpleBus::default();
     /// let program = [0xEA, 0x00]; // NOP; BRK
@@ -201,9 +202,8 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull::{AccessType, Bus, SimpleBus, Word};
-    /// use ull65::instruction::mos6502::Mos6502;
-    /// use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
+    /// use ull::{Bus, Word};
+    /// use ull65::{AccessType, Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO, SimpleBus};
     ///
     /// let mut cpu: Cpu<SimpleBus> = Cpu::default();
     /// let mut bus = SimpleBus::default();
@@ -239,15 +239,15 @@ impl<B: Bus + 'static> Cpu<B> {
     /// # Examples
     ///
     /// ```
-    /// use ull::{AccessType, Bus, SimpleBus, Word};
+    /// use ull::{Bus, Word};
+    /// use ull65::{AccessType, Cpu, SimpleBus};
     /// use ull65::instruction::mos6502::Mos6502;
-    /// use ull65::Cpu;
     ///
     /// let mut cpu: Cpu<SimpleBus> = Cpu::default();
     /// let mut bus = SimpleBus::default();
     ///
     /// cpu.pc = Word(0x8000);
-    /// bus.write_block(0x8000u16, &[0xEA], AccessType::DataWrite); // NOP
+    /// bus.write_block(Word(0x8000), &[0xEA], AccessType::DataWrite); // NOP
     ///
     /// let cycles = cpu.step(&mut bus);
     /// assert!(cycles > 0);
@@ -285,7 +285,7 @@ impl<B: Bus + 'static> Cpu<B> {
 
         let next_opcode = bus.read(self.pc, AccessType::OpcodeFetch);
         self.last_opcode = next_opcode;
-        let instruction = &self.table[u8::from(next_opcode) as usize];
+        let instruction = &self.table[next_opcode.as_usize()];
         let execute = instruction.execute;
         let cycles = instruction.cycles;
 
@@ -424,7 +424,7 @@ impl<B: Bus + 'static> Cpu<B> {
     }
 }
 
-impl<B: Bus + 'static> Default for Cpu<B> {
+impl<B: Mos6502CompatibleBus + 'static> Default for Cpu<B> {
     fn default() -> Self {
         Self::with_instruction_set::<Mos6502>()
     }
@@ -434,25 +434,29 @@ impl<B: Bus + 'static> Default for Cpu<B> {
 mod tests {
     extern crate alloc;
 
+    use ull::Bus;
     use super::*;
     use crate::instruction::mos6502::Mos6502;
     use crate::processor::run::RunPredicate;
-    use ull::{AccessType, Bus, TestingBus};
+    use crate::AccessType;
+    use crate::TestingBus;  
 
-    fn prepare_cpu(bus: &mut TestingBus) -> Cpu<TestingBus> {
+    type TestBus = TestingBus;
+
+    fn prepare_cpu(bus: &mut TestBus) -> Cpu<TestBus> {
         bus.write(RESET_VECTOR_LO, byte!(0x00), AccessType::DataWrite);
         bus.write(RESET_VECTOR_HI, byte!(0x80), AccessType::DataWrite);
-        let mut cpu: Cpu<TestingBus> = Cpu::with_instruction_set::<Mos6502>();
+        let mut cpu: Cpu<TestBus> = Cpu::with_instruction_set::<Mos6502>();
         cpu.reset(bus);
         cpu
     }
 
     #[test]
     fn with_reset_vector_sets_pc_and_vector_bytes() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         let reset = Word(0x9000);
 
-        let cpu: Cpu<TestingBus> = Cpu::with_reset_vector::<Mos6502>(&mut bus, reset);
+        let cpu: Cpu<TestBus> = Cpu::with_reset_vector::<Mos6502>(&mut bus, reset);
 
         assert_eq!(cpu.pc, reset);
         assert_eq!(bus.read(RESET_VECTOR_LO, AccessType::DataRead), reset.lo());
@@ -461,11 +465,11 @@ mod tests {
 
     #[test]
     fn with_program_loads_bytes_and_sets_pc() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         let program = [0xEA, 0x00];
         let start = Word(0x8000);
 
-        let cpu: Cpu<TestingBus> = Cpu::with_program::<Mos6502>(&mut bus, start, &program, start);
+        let cpu: Cpu<TestBus> = Cpu::with_program::<Mos6502>(&mut bus, start, &program, start);
 
         assert_eq!(cpu.pc, start);
         assert_eq!(bus.read(start, AccessType::OpcodeFetch), Byte(program[0]));
@@ -477,7 +481,7 @@ mod tests {
 
     #[test]
     fn tick_advances_bus_and_drains_dma() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         bus.write_block(Word(0x8000), &[0xEA, 0xEA], AccessType::DataWrite);
         bus.queue_dma(3);
         bus.queue_dma(2);
@@ -493,7 +497,7 @@ mod tests {
 
     #[test]
     fn run_until_stops_on_brk() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         bus.write_block(Word(0x8000), &[0xA9, 0x01, 0x00], AccessType::DataWrite);
         let mut cpu = prepare_cpu(&mut bus);
 
@@ -513,12 +517,11 @@ mod tests {
 
     #[test]
     fn run_until_stops_on_predicate() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         bus.write_block(Word(0x8000), &[0xE8, 0xE8, 0x00], AccessType::DataWrite);
         let mut cpu = prepare_cpu(&mut bus);
 
-        let mut stop_when_x_is_two =
-            |cpu: &Cpu<TestingBus>, _bus: &mut TestingBus| cpu.x == byte!(0x02);
+        let mut stop_when_x_is_two = |cpu: &Cpu<TestBus>, _bus: &mut TestBus| cpu.x == byte!(0x02);
 
         let summary = cpu.run_until(
             &mut bus,
@@ -535,7 +538,7 @@ mod tests {
 
     #[test]
     fn run_until_enforces_instruction_limit() {
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         bus.write_block(
             Word(0x8000),
             &[0xA9, 0x01, 0xE8, 0x00],
@@ -590,15 +593,15 @@ mod tests {
             0x00,         // BRK: Halt so the test can assert ~1.5 * n^2 work finished.
         ];
 
-        let mut bus = TestingBus::default();
+        let mut bus = TestBus::default();
         bus.write_block(Word(0x8000), PROGRAM, AccessType::DataWrite);
         bus.write(
-            Word(u16::from(FACTOR1_ADDR)),
+            Byte(FACTOR1_ADDR),
             Byte(FACTOR1_INIT),
             AccessType::DataWrite,
         );
         bus.write(
-            Word(u16::from(FACTOR2_ADDR)),
+            Byte(FACTOR2_ADDR),
             Byte(FACTOR2_INIT),
             AccessType::DataWrite,
         );
@@ -616,8 +619,8 @@ mod tests {
         assert!(summary.hit_brk());
         assert!(!summary.hit_instruction_limit());
 
-        let low = bus.read(FACTOR1_ADDR, AccessType::DataRead);
-        let high = bus.read(FACTOR2_ADDR, AccessType::DataRead);
+        let low = bus.read(Byte(FACTOR1_ADDR), AccessType::DataRead);
+        let high = bus.read(Byte(FACTOR2_ADDR), AccessType::DataRead);
 
         assert_eq!(low, Byte(EXPECTED_LOW));
         assert_eq!(high, Byte(EXPECTED_HIGH));

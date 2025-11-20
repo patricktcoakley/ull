@@ -5,7 +5,7 @@
 
 use bitflags::bitflags;
 use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
-use ull::Byte;
+use ull::{Address, Byte};
 
 bitflags! {
     /// Processor status register (P register).
@@ -75,13 +75,13 @@ impl Flags {
     #[must_use]
     #[inline]
     pub fn bit(self, flag: Flags) -> u8 {
-        u8::from(self.contains(flag))
+        self.contains(flag) as u8
     }
 }
 
 impl From<Byte> for Flags {
     fn from(byte: Byte) -> Self {
-        Flags::from_bits_truncate(u8::from(byte))
+        Flags::from_bits_truncate(byte.as_u8())
     }
 }
 

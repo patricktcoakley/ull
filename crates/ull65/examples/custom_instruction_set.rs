@@ -3,17 +3,18 @@
 //! `BRK` opcode (0x00) with a custom handler that traps into our code
 //! instead of invoking the IRQ vector.
 
-use ull::{Bus, SimpleBus, Word};
-use ull65::instruction::{Instruction, InstructionSet, mos6502::Mos6502};
-
-use ull65::Cpu;
+use ull::Word;
+use ull65::bus::Mos6502CompatibleBus;
+use ull65::instruction::{mos6502::Mos6502, Instruction, InstructionSet};
 use ull65::processor::run::{RunConfig, RunPredicate};
+use ull65::{Cpu, SimpleBus};
 
 /// Custom CPU model that patches the stock MOS table.
 struct Trap6502;
 
 impl InstructionSet for Trap6502 {
-    fn instruction_table<B: Bus + 'static>() -> ull65::instruction::InstructionTable<B> {
+    fn instruction_table<B: Mos6502CompatibleBus + 'static>()
+    -> ull65::instruction::InstructionTable<B> {
         // Start from the canonical MOS table and replace opcode 0x00 (BRK).
         Mos6502::base_table::<B>().with(
             0x00,
@@ -26,7 +27,7 @@ impl InstructionSet for Trap6502 {
 }
 
 /// Simple handler that records the trap and advances the program counter.
-fn trap_brk<B: Bus>(cpu: &mut Cpu<B>, _bus: &mut B) {
+fn trap_brk<B: Mos6502CompatibleBus>(cpu: &mut Cpu<B>, _bus: &mut B) {
     println!("custom BRK handler invoked at PC={:04X}", cpu.pc);
     cpu.pc += 1;
 }

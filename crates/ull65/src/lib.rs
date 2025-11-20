@@ -18,8 +18,8 @@
 //! # Quick Start
 //!
 //! ```
-//! use ull::{Byte, SimpleBus, Word};
-//! use ull65::{Cpu, instruction::mos6502::Mos6502};
+//! use ull::{Byte, Word};
+//! use ull65::{AccessType, Cpu, SimpleBus, instruction::mos6502::Mos6502};
 //!
 //! let mut bus = SimpleBus::default();
 //! let program = [0xA9, 0x42, 0x00]; // LDA #$42; BRK
@@ -58,24 +58,22 @@
 
 extern crate alloc;
 
+pub mod access;
+pub mod bus;
 pub mod instruction;
 pub mod processor;
 
 /// Re-export core primitives/bus for convenience so downstream users can depend on `ull65`
 /// only, while internal modules still import them explicitly from `ull`.
-pub use ull::bus::{
-    self as bus, AccessType, Bus, DmaRequest, DmaResult, Phase, SimpleBus, TestingBus,
-};
-pub use ull::byte::{self as byte, Byte};
-pub use ull::nibble::{self as nibble, Nibble};
-pub use ull::word::{self as word, Word};
-
+pub use access::{AccessType, Phase, ResetVectorExt};
+pub use bus::{Mos6502CompatibleBus, simple_bus::SimpleBus, testing_bus::TestingBus};
+pub use instruction::{Instruction, InstructionSet, InstructionTable};
 pub use processor::addressing_mode::{self, AddressingMode};
 pub use processor::run::{RunConfig, RunOutcome, RunPredicate, RunSummary};
 pub use processor::{
-    Cpu, RunState,
     cpu::{
         IRQ_VECTOR_HI, IRQ_VECTOR_LO, NMI_VECTOR_HI, NMI_VECTOR_LO, RESET_VECTOR_HI,
         RESET_VECTOR_LO, STACK_SPACE_START,
-    },
+    }, Cpu,
+    RunState,
 };

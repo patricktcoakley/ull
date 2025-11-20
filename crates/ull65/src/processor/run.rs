@@ -1,5 +1,5 @@
+use crate::bus::Mos6502CompatibleBus;
 use crate::Cpu;
-use ull::Bus;
 
 /// Reason why [`Cpu::run_until`](crate::processor::cpu::Cpu::run_until) stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -60,11 +60,11 @@ impl RunSummary {
 }
 
 /// Wrapper around a predicate callback used by [`RunConfig`].
-pub struct RunPredicate<'a, B: Bus> {
+pub struct RunPredicate<'a, B: Mos6502CompatibleBus> {
     callback: &'a mut dyn FnMut(&Cpu<B>, &mut B) -> bool,
 }
 
-impl<'a, B: Bus> RunPredicate<'a, B> {
+impl<'a, B: Mos6502CompatibleBus> RunPredicate<'a, B> {
     /// Create a new predicate wrapper.
     pub fn new(callback: &'a mut dyn FnMut(&Cpu<B>, &mut B) -> bool) -> Self {
         Self { callback }
@@ -76,7 +76,7 @@ impl<'a, B: Bus> RunPredicate<'a, B> {
 }
 
 /// Configuration for [`Cpu::run_until`].
-pub struct RunConfig<'a, B: Bus> {
+pub struct RunConfig<'a, B: Mos6502CompatibleBus> {
     /// Maximum number of instructions to execute before stopping.
     pub instruction_limit: Option<u64>,
     /// Stop automatically when a BRK (opcode 0x00) executes.
@@ -85,7 +85,7 @@ pub struct RunConfig<'a, B: Bus> {
     pub predicate: Option<RunPredicate<'a, B>>,
 }
 
-impl<B: Bus> Default for RunConfig<'_, B> {
+impl<B: Mos6502CompatibleBus> Default for RunConfig<'_, B> {
     fn default() -> Self {
         Self {
             instruction_limit: None,

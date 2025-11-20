@@ -68,10 +68,10 @@ The general workflow for `ull65` is:
    DMA callbacks.
 
 ```rust
-use ull::{AccessType, SimpleBus, Word};
+use ull::Word;
 use ull65::instruction::mos6502::Mos6502;
 use ull65::processor::run::RunConfig;
-use ull65::Cpu;
+use ull65::{AccessType, Cpu, SimpleBus};
 
 fn main() {
     let mut bus = SimpleBus::default();

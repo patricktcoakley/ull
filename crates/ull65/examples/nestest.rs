@@ -6,10 +6,12 @@
 use std::fs;
 use std::path::Path;
 
-use ull::{AccessType, Bus, Byte, Word};
+use ull::Bus;
+use ull::{Address, Byte, Word};
+use ull65::bus::Mos6502CompatibleBus;
 use ull65::instruction::mos6502::Mos6502;
 use ull65::instruction::{InstructionSet, InstructionTable};
-use ull65::{Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
+use ull65::{AccessType, Cpu, RESET_VECTOR_HI, RESET_VECTOR_LO};
 
 /// Minimal NES memory map that satisfies nestest.
 struct NesBus {
@@ -21,11 +23,11 @@ struct NesBus {
 
 impl NesBus {
     /// Mirror PRG addresses depending on whether the ROM is 16 KB or 32 KB.
-    fn prg_addr(&self, addr: u16) -> usize {
+    fn prg_addr(&self, addr: usize) -> usize {
         if self.rom.len() <= 0x4000 {
-            (addr & 0x3FFF) as usize
+            addr & 0x3FFF
         } else {
-            (addr & 0x7FFF) as usize
+            addr & 0x7FFF
         }
     }
 
@@ -71,52 +73,53 @@ impl NesBus {
 }
 
 impl Bus for NesBus {
+    type Access = AccessType;
+    type Data = Byte;
+
     fn read<A>(&mut self, addr: A, _access: AccessType) -> Byte
     where
-        A: Into<Word>,
+        A: Address,
     {
-        let addr = addr.into();
-        let raw = addr.0;
-        match raw {
+        let addr = addr.as_usize();
+        match addr {
             // $0000-$1FFF: internal RAM mirrored every 2 KB.
-            0x0000..=0x1FFF => Byte::from(self.ram[(addr.as_usize()) & 0x07FF]),
+            0x0000..=0x1FFF => Byte::from(self.ram[addr & 0x07FF]),
             // $2000-$3FFF: PPU registers mirrored every 8 bytes.
-            0x2000..=0x3FFF => Byte::from(self.ppu[(raw & 0x0007) as usize]),
+            0x2000..=0x3FFF => Byte::from(self.ppu[addr & 0x0007]),
             // $4000-$4017: APU + I/O (unused for nestest, return 0).
             0x4000..=0x4017 => Byte::from(0x00),
             // $6000-$7FFF: cartridge SRAM.
-            0x6000..=0x7FFF => Byte::from(self.sram[(addr.as_usize()) & 0x1FFF]),
+            0x6000..=0x7FFF => Byte::from(self.sram[addr & 0x1FFF]),
             // $8000-$FFFF: PRG ROM (mirrored if only 16 KB present).
-            0x8000..=0xFFFF => Byte::from(self.rom[self.prg_addr(raw)]),
+            0x8000..=0xFFFF => Byte::from(self.rom[self.prg_addr(addr)]),
             _ => Byte::from(0xFF),
         }
     }
 
     fn write<A, V>(&mut self, addr: A, value: V, _access: AccessType)
     where
-        A: Into<Word>,
+        A: Address,
         V: Into<Byte>,
     {
-        let addr = addr.into();
-        let raw = addr.0;
-        let value = value.into();
-        match raw {
+        let addr = addr.as_usize();
+        let value: Byte = value.into();
+        match addr {
             // Writes follow the same mirroring scheme as reads.
             0x0000..=0x1FFF => {
-                self.ram[(addr.as_usize()) & 0x07FF] = u8::from(value);
+                self.ram[addr & 0x07FF] = value.as_u8();
             }
             0x2000..=0x3FFF => {
-                self.ppu[(raw & 0x0007) as usize] = u8::from(value);
+                self.ppu[addr & 0x0007] = value.as_u8();
             }
             0x4000..=0x4017 => {}
             0x6000..=0x7FFF => {
-                self.sram[(addr.as_usize()) & 0x1FFF] = u8::from(value);
+                self.sram[addr & 0x1FFF] = value.as_u8();
             }
             // Allow the test harness to poke the reset vector inside PRG ROM.
-            _ if raw == u16::from(RESET_VECTOR_LO) || raw == u16::from(RESET_VECTOR_HI) => {
-                let offset = self.prg_addr(raw);
+            _ if addr == RESET_VECTOR_LO.as_usize() || addr == RESET_VECTOR_HI.as_usize() => {
+                let offset = self.prg_addr(addr);
                 if offset < self.rom.len() {
-                    self.rom[offset] = u8::from(value);
+                    self.rom[offset] = value.as_u8();
                 }
             }
             0x8000..=0xFFFF => {}
@@ -128,7 +131,7 @@ impl Bus for NesBus {
 struct Ricoh2a03;
 
 impl InstructionSet for Ricoh2a03 {
-    fn instruction_table<B: Bus + 'static>() -> InstructionTable<B> {
+    fn instruction_table<B: Mos6502CompatibleBus + 'static>() -> InstructionTable<B> {
         Mos6502::base_table()
     }
     const SUPPORTS_DECIMAL_MODE: bool = false;

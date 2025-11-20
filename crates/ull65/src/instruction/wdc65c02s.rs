@@ -1,21 +1,23 @@
 //! The WDC 65C02 instruction set implementation.
 
-use crate::instruction::mos6502::{Mos6502, illegal, illegal_a};
+use crate::bus::Mos6502CompatibleBus;
+use crate::instruction::mos6502::{illegal, illegal_a, Mos6502};
 use crate::instruction::{Instruction, InstructionSet, InstructionTable};
 use crate::processor::addressing_mode::{
     Absolute, AbsoluteIndirectCorrect, AbsoluteIndirectX, AbsoluteX, Immediate, ZeroPage,
     ZeroPageIndirect, ZeroPageX,
 };
 use crate::processor::flags::Flags;
-use crate::{AddressingMode, Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
-use ull::{AccessType, Bus, Byte, Word, word};
+use crate::AccessType;
+use crate::{AddressingMode, Cpu, RunState, IRQ_VECTOR_HI, IRQ_VECTOR_LO};
+use ull::{word, Address, Byte, Word};
 
 pub struct Wdc65c02s;
 
 impl Wdc65c02s {
     /// Builds the canonical WDC 65C02S instruction table.
     #[must_use]
-    pub const fn base_table<B: Bus + 'static>() -> InstructionTable<B> {
+    pub const fn base_table<B: Mos6502CompatibleBus + 'static>() -> InstructionTable<B> {
         Mos6502::base_table()
             // BRK with decimal clear
             .with(
@@ -785,7 +787,7 @@ impl Wdc65c02s {
 }
 
 impl InstructionSet for Wdc65c02s {
-    fn instruction_table<B: Bus + 'static>() -> InstructionTable<B> {
+    fn instruction_table<B: Mos6502CompatibleBus + 'static>() -> InstructionTable<B> {
         Self::base_table()
     }
 }
@@ -795,7 +797,7 @@ impl InstructionSet for Wdc65c02s {
 const RESET: bool = false;
 const SET: bool = true;
 
-pub fn bra<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bra<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + AM::BYTES;
     let offset = i8::from(bus.read(cpu.pc + 1, AccessType::DataRead));
     let target = base + offset;
@@ -808,14 +810,14 @@ pub fn bra<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
 }
 
 #[inline]
-pub fn stz<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn stz<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     bus.write(addr, Byte::ZERO, AccessType::DataWrite);
 
     cpu.pc += AM::BYTES;
 }
 
-pub fn trb<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn trb<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
 
@@ -825,7 +827,7 @@ pub fn trb<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn tsb<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn tsb<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = val | cpu.a;
@@ -836,7 +838,7 @@ pub fn tsb<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn inc_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn inc_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a += 1;
 
     cpu.p.set_signed(cpu.a.is_signed());
@@ -844,7 +846,7 @@ pub fn inc_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
 
     cpu.pc += 1;
 }
-pub fn dec_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn dec_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a -= 1;
 
     cpu.p.set_signed(cpu.a.is_signed());
@@ -853,26 +855,26 @@ pub fn dec_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn phx<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn phx<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.push(bus, cpu.x);
 
     cpu.pc += 1;
 }
 
-pub fn phy<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn phy<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.push(bus, cpu.y);
 
     cpu.pc += 1;
 }
 
-pub fn plx<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn plx<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.x = cpu.pop(bus);
     cpu.p.set_signed(cpu.x.is_signed());
     cpu.p.set_zero(cpu.x == 0);
 
     cpu.pc += 1;
 }
-pub fn ply<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn ply<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.y = cpu.pop(bus);
 
     cpu.p.set_signed(cpu.y.is_signed());
@@ -881,113 +883,113 @@ pub fn ply<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn bbr0<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr0<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<0, false, B>(cpu, bus);
 }
-pub fn bbr1<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr1<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<1, false, B>(cpu, bus);
 }
-pub fn bbr2<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr2<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<2, false, B>(cpu, bus);
 }
-pub fn bbr3<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr3<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<3, false, B>(cpu, bus);
 }
-pub fn bbr4<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr4<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<4, false, B>(cpu, bus);
 }
-pub fn bbr5<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr5<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<5, false, B>(cpu, bus);
 }
-pub fn bbr6<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr6<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<6, false, B>(cpu, bus);
 }
-pub fn bbr7<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbr7<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<7, false, B>(cpu, bus);
 }
 
-pub fn bbs0<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs0<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<0, true, B>(cpu, bus);
 }
-pub fn bbs1<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs1<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<1, true, B>(cpu, bus);
 }
-pub fn bbs2<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs2<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<2, true, B>(cpu, bus);
 }
-pub fn bbs3<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs3<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<3, true, B>(cpu, bus);
 }
-pub fn bbs4<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs4<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<4, true, B>(cpu, bus);
 }
-pub fn bbs5<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs5<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<5, true, B>(cpu, bus);
 }
-pub fn bbs6<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs6<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<6, true, B>(cpu, bus);
 }
-pub fn bbs7<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bbs7<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     branch_on_zero_page_bit::<7, true, B>(cpu, bus);
 }
 
-pub fn rmb0<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb0<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<0, RESET, B>(cpu, bus);
 }
-pub fn rmb1<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb1<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<1, RESET, B>(cpu, bus);
 }
-pub fn rmb2<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb2<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<2, RESET, B>(cpu, bus);
 }
-pub fn rmb3<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb3<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<3, RESET, B>(cpu, bus);
 }
-pub fn rmb4<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb4<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<4, RESET, B>(cpu, bus);
 }
-pub fn rmb5<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb5<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<5, RESET, B>(cpu, bus);
 }
-pub fn rmb6<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb6<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<6, RESET, B>(cpu, bus);
 }
-pub fn rmb7<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rmb7<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<7, RESET, B>(cpu, bus);
 }
-pub fn smb0<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb0<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<0, SET, B>(cpu, bus);
 }
-pub fn smb1<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb1<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<1, SET, B>(cpu, bus);
 }
-pub fn smb2<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb2<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<2, SET, B>(cpu, bus);
 }
-pub fn smb3<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb3<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<3, SET, B>(cpu, bus);
 }
-pub fn smb4<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb4<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<4, SET, B>(cpu, bus);
 }
-pub fn smb5<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb5<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<5, SET, B>(cpu, bus);
 }
-pub fn smb6<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb6<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<6, SET, B>(cpu, bus);
 }
-pub fn smb7<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn smb7<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     modify_zero_page_bit::<7, SET, B>(cpu, bus);
 }
-pub fn stp<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn stp<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.run_state = RunState::Halted;
 }
-pub fn wai<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn wai<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.run_state = RunState::Waiting;
     cpu.pc += 1;
 }
 
-pub fn brk<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn brk<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let return_pc = word!(cpu.pc + 2);
 
     cpu.push(bus, return_pc.hi());
@@ -1004,7 +1006,7 @@ pub fn brk<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = word!((lo, hi));
 }
 
-pub fn bit<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bit<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = Immediate::fetch_address(cpu, bus);
     let operand = bus.read(addr, AccessType::DataRead);
 
@@ -1013,14 +1015,18 @@ pub fn bit<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc += Immediate::BYTES;
 }
 
-fn branch_on_zero_page_bit<const BIT: u8, const BRANCH_WHEN_SET: bool, B: Bus + 'static>(
+fn branch_on_zero_page_bit<
+    const BIT: u8,
+    const BRANCH_WHEN_SET: bool,
+    B: Mos6502CompatibleBus + 'static,
+>(
     cpu: &mut Cpu<B>,
     bus: &mut B,
 ) {
     debug_assert!(BIT < 8);
 
     let zp_addr: Word = bus.read(cpu.pc + 1, AccessType::DataRead).into();
-    let value = u8::from(bus.read(zp_addr, AccessType::DataRead));
+    let value = bus.read(zp_addr, AccessType::DataRead).as_u8();
     let rel = i8::from(bus.read(cpu.pc + 2, AccessType::DataRead));
 
     let base = cpu.pc + 3u16;
@@ -1039,7 +1045,7 @@ fn branch_on_zero_page_bit<const BIT: u8, const BRANCH_WHEN_SET: bool, B: Bus + 
     }
 }
 
-fn modify_zero_page_bit<const BIT: u8, const SET_BIT: bool, B: Bus + 'static>(
+fn modify_zero_page_bit<const BIT: u8, const SET_BIT: bool, B: Mos6502CompatibleBus + 'static>(
     cpu: &mut Cpu<B>,
     bus: &mut B,
 ) {
@@ -1064,14 +1070,15 @@ mod tests {
     use super::*;
     use crate::processor::addressing_mode::{AbsoluteX, Immediate, ZeroPage};
     use crate::processor::flags::Flags;
+    use crate::SimpleBus;
     use crate::{RunState, STACK_SPACE_START};
-    use ull::SimpleBus;
-    use ull::{byte, word};
+    use ull::{byte, word, Bus};
+    type TestBus = SimpleBus;
 
     #[test]
     fn test_bra_branches_forward() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.pc = word!(0x4000);
         bus.write(cpu.pc + 1, byte!(0x04), AccessType::DataWrite);
 
@@ -1082,8 +1089,8 @@ mod tests {
 
     #[test]
     fn test_stz_zero_page_clears_memory() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         bus.write(cpu.pc + 1, byte!(0x10), AccessType::DataWrite);
         bus.write(word!(0x0010), byte!(0xFF), AccessType::DataWrite);
 
@@ -1095,8 +1102,8 @@ mod tests {
 
     #[test]
     fn test_stz_absolute_x_clears_offset_address() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.x = byte!(0x01);
         let base = word!(0x1234);
         let target = base + cpu.x;
@@ -1113,8 +1120,8 @@ mod tests {
 
     #[test]
     fn test_trb_zero_page_clears_bits() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.a = byte!(0x0F);
         bus.write(cpu.pc + 1, byte!(0x20), AccessType::DataWrite);
         bus.write(word!(0x0020), byte!(0xF0), AccessType::DataWrite);
@@ -1128,8 +1135,8 @@ mod tests {
 
     #[test]
     fn test_tsb_zero_page_sets_bits() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.a = byte!(0x0F);
         bus.write(cpu.pc + 1, byte!(0x30), AccessType::DataWrite);
         bus.write(word!(0x0030), byte!(0xF1), AccessType::DataWrite);
@@ -1151,8 +1158,8 @@ mod tests {
 
     #[test]
     fn test_inc_dec_a_update_flags() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.a = byte!(0xFF);
 
         inc_a(&mut cpu, &mut bus);
@@ -1166,8 +1173,8 @@ mod tests {
 
     #[test]
     fn test_phx_phy_push_registers() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.x = byte!(0xAA);
         cpu.y = byte!(0xBB);
 
@@ -1183,8 +1190,8 @@ mod tests {
 
     #[test]
     fn test_plx_ply_pull_registers() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         cpu.push(&mut bus, byte!(0x12));
         cpu.push(&mut bus, byte!(0x34));
 
@@ -1198,14 +1205,14 @@ mod tests {
     #[test]
     fn test_bbr_branches_per_bit() {
         for bit in 0u8..8 {
-            let mut bus = SimpleBus::default();
-            let mut cpu: Cpu<SimpleBus> = Cpu::default();
+            let mut bus = TestBus::default();
+            let mut cpu: Cpu<TestBus> = Cpu::default();
             cpu.pc = word!(0x2000);
             let zp = byte!(0x10 + bit);
             bus.write(cpu.pc + 1, zp, AccessType::DataWrite);
             bus.write(cpu.pc + 2, byte!(0x02), AccessType::DataWrite);
             bus.write(
-                word!(u16::from(zp)),
+                word!(zp.as_u16()),
                 byte!(0xFF & !(1 << bit)),
                 AccessType::DataRead,
             );
@@ -1229,13 +1236,13 @@ mod tests {
     #[test]
     fn test_bbs_skips_when_bit_clear() {
         for bit in 0u8..8 {
-            let mut bus = SimpleBus::default();
-            let mut cpu: Cpu<SimpleBus> = Cpu::default();
+            let mut bus = TestBus::default();
+            let mut cpu: Cpu<TestBus> = Cpu::default();
             let start = cpu.pc;
             let zp = byte!(0x10 + bit);
             bus.write(cpu.pc + 1, zp, AccessType::DataWrite);
             bus.write(cpu.pc + 2, byte!(0x02), AccessType::DataWrite);
-            bus.write(word!(u16::from(zp)), byte!(0x00), AccessType::DataWrite);
+            bus.write(word!(zp.as_u16()), byte!(0x00), AccessType::DataWrite);
 
             match bit {
                 0 => bbs0(&mut cpu, &mut bus),
@@ -1256,11 +1263,11 @@ mod tests {
     #[test]
     fn test_rmb_clears_all_bits() {
         for bit in 0u8..8 {
-            let mut bus = SimpleBus::default();
-            let mut cpu: Cpu<SimpleBus> = Cpu::default();
+            let mut bus = TestBus::default();
+            let mut cpu: Cpu<TestBus> = Cpu::default();
             let zp = byte!(0x05 + bit);
             bus.write(cpu.pc + 1, zp, AccessType::DataWrite);
-            bus.write(word!(u16::from(zp)), byte!(0xFF), AccessType::DataWrite);
+            bus.write(word!(zp.as_u16()), byte!(0xFF), AccessType::DataWrite);
 
             match bit {
                 0 => rmb0(&mut cpu, &mut bus),
@@ -1275,7 +1282,7 @@ mod tests {
             }
 
             assert_eq!(
-                bus.read(word!(u16::from(zp)), AccessType::DataRead),
+                bus.read(word!(zp.as_u16()), AccessType::DataRead),
                 byte!(0xFF & !(1 << bit))
             );
         }
@@ -1284,11 +1291,11 @@ mod tests {
     #[test]
     fn test_smb_sets_all_bits() {
         for bit in 0u8..8 {
-            let mut bus = SimpleBus::default();
-            let mut cpu: Cpu<SimpleBus> = Cpu::default();
+            let mut bus = TestBus::default();
+            let mut cpu: Cpu<TestBus> = Cpu::default();
             let zp = byte!(0x05 + bit);
             bus.write(cpu.pc + 1, zp, AccessType::DataWrite);
-            bus.write(word!(u16::from(zp)), byte!(0x00), AccessType::DataWrite);
+            bus.write(word!(zp.as_u16()), byte!(0x00), AccessType::DataWrite);
 
             match bit {
                 0 => smb0(&mut cpu, &mut bus),
@@ -1303,7 +1310,7 @@ mod tests {
             }
 
             assert_eq!(
-                bus.read(word!(u16::from(zp)), AccessType::DataRead),
+                bus.read(word!(zp.as_u16()), AccessType::DataRead),
                 byte!(1 << bit)
             );
         }
@@ -1311,8 +1318,8 @@ mod tests {
 
     #[test]
     fn test_stp_sets_halted_state() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
 
         stp(&mut cpu, &mut bus);
 
@@ -1321,8 +1328,8 @@ mod tests {
 
     #[test]
     fn test_wai_sets_waiting_and_advances_pc() {
-        let mut bus = SimpleBus::default();
-        let mut cpu: Cpu<SimpleBus> = Cpu::default();
+        let mut bus = TestBus::default();
+        let mut cpu: Cpu<TestBus> = Cpu::default();
         let start = cpu.pc;
 
         wai(&mut cpu, &mut bus);

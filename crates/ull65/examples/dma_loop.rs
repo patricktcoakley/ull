@@ -6,11 +6,11 @@
 //! the bus clock and draining DMA so elapsed time stays in sync.
 
 use std::collections::VecDeque;
-use ull::{AccessType, Bus, Byte, DmaRequest, DmaResult, Word};
-use ull65::Cpu;
+use ull::{Address, Bus, Byte, DmaRequest, DmaResult, Word};
 use ull65::instruction::mos6502::Mos6502;
+use ull65::{AccessType, Cpu};
 
-const DMA_TRIGGER_ADDR: u16 = 0xD002;
+const DMA_TRIGGER_ADDR: Word = Word(0xD002);
 const DMA_LENGTH: u8 = 8;
 
 struct DemoBus {
@@ -34,23 +34,25 @@ impl Default for DemoBus {
 }
 
 impl Bus for DemoBus {
+    type Access = AccessType;
+    type Data = Byte;
+
     fn read<A>(&mut self, addr: A, _access: AccessType) -> Byte
     where
-        A: Into<Word>,
+        A: Address,
     {
-        let addr = addr.into();
         Byte(self.mem[addr.as_usize()])
     }
 
     fn write<A, V>(&mut self, addr: A, value: V, _access: AccessType)
     where
-        A: Into<Word>,
-        V: Into<Byte>,
+        A: Address,
+        V: Into<Self::Data>,
     {
-        let addr = addr.into();
-        let value = value.into();
-        self.mem[addr.as_usize()] = value.0;
-        if addr.0 == DMA_TRIGGER_ADDR {
+        let addr = addr.as_usize();
+        let value: Byte = value.into();
+        self.mem[addr] = value.0;
+        if addr == DMA_TRIGGER_ADDR.as_usize() {
             println!("DMA triggered ({} cycles)", DMA_LENGTH);
             self.dma_queue.push_back(DMA_LENGTH);
         }
@@ -86,8 +88,8 @@ fn main() {
         0x00,
         0x02, // STA $0200
         0x8D,
-        (DMA_TRIGGER_ADDR & 0xFF) as u8,
-        (DMA_TRIGGER_ADDR >> 8) as u8, // STA $D002 (DMA)
+        DMA_TRIGGER_ADDR.lo().as_u8(),
+        DMA_TRIGGER_ADDR.hi().as_u8(), // STA $D002 (DMA)
         0xEE,
         0x00,
         0x02, // INC $0200

@@ -1,5 +1,9 @@
-use crate::{AccessType, Bus, Byte, DmaRequest, DmaResult, Word};
+//! Utility bus for deterministic unit testing.
+
 use alloc::{boxed::Box, collections::VecDeque, vec};
+use ull::{Address, Byte};
+use ull::{Bus, DmaRequest, DmaResult};
+use crate::AccessType;
 
 pub struct TestingBus {
     mem: Box<[u8]>,
@@ -27,22 +31,23 @@ impl Default for TestingBus {
 }
 
 impl Bus for TestingBus {
-    fn read<A>(&mut self, addr: A, _access: AccessType) -> Byte
+    type Access = AccessType;
+    type Data = Byte;
+
+    fn read<A>(&mut self, addr: A, _access: Self::Access) -> Self::Data
     where
-        A: Into<Word>,
+        A: Address,
     {
-        let addr = addr.into();
         Byte(self.mem[addr.as_usize()])
     }
 
-    fn write<A, V>(&mut self, addr: A, value: V, _access: AccessType)
+    fn write<A, V>(&mut self, addr: A, value: V, _access: Self::Access)
     where
-        A: Into<Word>,
-        V: Into<Byte>,
+        A: Address,
+        V: Into<Self::Data>,
     {
-        let addr = addr.into();
-        let value = value.into();
-        self.mem[addr.as_usize()] = value.0;
+        let byte: Byte = value.into();
+        self.mem[addr.as_usize()] = byte.0;
     }
 
     fn on_tick(&mut self, cycles: u8) {

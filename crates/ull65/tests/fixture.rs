@@ -1,7 +1,8 @@
-use ull::bus::SimpleBus;
-use ull::{AccessType, Bus, Word};
-use ull65::Cpu;
+use ull::{Address, Bus, Word};
 use ull65::instruction::{InstructionSet, mos6502::Mos6502};
+use ull65::{AccessType, Cpu, ResetVectorExt, SimpleBus};
+
+type FixtureBus = SimpleBus;
 
 const MAX_STEPS: u64 = 50_000_000;
 const LOOP_THRESHOLD: u32 = 10;
@@ -44,7 +45,7 @@ pub fn run_fixture_with<S>(fixture: &Fixture)
 where
     S: InstructionSet,
 {
-    let mut bus = SimpleBus::default();
+    let mut bus = FixtureBus::default();
     bus.write_block(fixture.load_addr, fixture.rom, AccessType::DataWrite);
     bus.set_reset_vector(fixture.reset_vector);
 
@@ -97,7 +98,7 @@ fn panic_trapped(
     steps: u64,
     pc: Word,
     cpu: &Cpu<SimpleBus>,
-    bus: &mut SimpleBus,
+    bus: &mut FixtureBus,
 ) -> ! {
     let test_case = bus.read(Word(0x0200), AccessType::DataRead);
     panic!(
@@ -105,7 +106,7 @@ fn panic_trapped(
         name = fixture.name,
         pc = pc,
         steps = steps,
-        test_case = u8::from(test_case),
+        test_case = test_case.as_u8(),
         cpu = cpu
     );
 }

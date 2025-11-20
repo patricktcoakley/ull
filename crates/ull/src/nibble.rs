@@ -5,7 +5,7 @@
 //! mask to the lower 4 bits.
 //!
 
-use crate::byte::Byte;
+use crate::Word;
 use core::cmp::Ordering;
 use core::fmt;
 use core::ops::{Add, AddAssign, BitAnd, BitOr, BitXor, Not, Sub, SubAssign};
@@ -28,13 +28,6 @@ impl Nibble {
     fn mask(value: u8) -> u8 {
         value & Self::MAX
     }
-
-    /// Converts to `usize` for indexing.
-    #[inline]
-    #[must_use]
-    pub const fn as_usize(self) -> usize {
-        self.0 as usize
-    }
 }
 
 impl From<u8> for Nibble {
@@ -47,12 +40,6 @@ impl From<u8> for Nibble {
 impl From<Nibble> for u8 {
     fn from(value: Nibble) -> Self {
         value.0
-    }
-}
-
-impl From<Nibble> for Byte {
-    fn from(value: Nibble) -> Self {
-        Byte::from(value.0)
     }
 }
 
@@ -74,6 +61,12 @@ impl From<Nibble> for usize {
     }
 }
 
+impl From<usize> for Nibble {
+    fn from(value: usize) -> Self {
+        Nibble::from((value & usize::from(Self::MAX)) as u8)
+    }
+}
+
 impl Add<Nibble> for Nibble {
     type Output = Nibble;
 
@@ -87,6 +80,22 @@ impl Add<u8> for Nibble {
 
     fn add(self, rhs: u8) -> Nibble {
         Nibble::from(Self::mask(self.0 + rhs))
+    }
+}
+
+impl Add<usize> for Nibble {
+    type Output = Nibble;
+
+    fn add(self, rhs: usize) -> Nibble {
+        Nibble::from(Self::mask(self.0 + (rhs as u8)))
+    }
+}
+
+impl Add<Word> for Nibble {
+    type Output = Word;
+
+    fn add(self, rhs: Word) -> Word {
+        rhs + Word::from(self)
     }
 }
 
@@ -115,6 +124,14 @@ impl Sub<u8> for Nibble {
 
     fn sub(self, rhs: u8) -> Nibble {
         Nibble::from(Self::mask(self.0.wrapping_sub(rhs)))
+    }
+}
+
+impl Sub<usize> for Nibble {
+    type Output = Nibble;
+
+    fn sub(self, rhs: usize) -> Nibble {
+        Nibble::from(Self::mask(self.0.wrapping_sub(rhs as u8)))
     }
 }
 
@@ -204,11 +221,11 @@ mod tests {
 
     #[test]
     fn add_wraps_to_low_four_bits() {
-        assert_eq!(Nibble::from(0x0D) + 0x05, Nibble::from(0x02));
+        assert_eq!(Nibble::from(0x0D_u8) + 0x05_u8, Nibble::from(0x02_u8));
     }
 
     #[test]
     fn sub_wraps_to_low_four_bits() {
-        assert_eq!(Nibble::from(0x01) - 0x03, Nibble::from(0x0E));
+        assert_eq!(Nibble::from(0x01_u8) - 0x03_u8, Nibble::from(0x0E_u8));
     }
 }

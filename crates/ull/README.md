@@ -1,7 +1,8 @@
 ## ull
 
 `ull` is the core of the other crates in this project as it contains the type-safe numeric
-wrappers (`Nibble`, `Byte`, `Word`), the `Bus` trait, and some convenience implementations like `SimpleBus`.
+wrappers (`Nibble`, `Byte`, `Word`) plus the `Bus` trait. Higher-level crates supply ready-to-use
+bus implementations (e.g., `SimpleBus` in `ull65`) while sharing the same address and DMA semantics.
 Other crates leverage these fundamental building blocks so they can share the same semantics for addresses, DMA, and
 memory I/O. While not every system will use every aspect of this crate, they will all still use this as the foundation.
 
@@ -11,14 +12,17 @@ The `Bus` trait models a synchronous, byte-addressed data bus:
 
 ```rust
 pub trait Bus {
-    fn read<A>(&mut self, addr: A, access: AccessType) -> Byte
-    where
-        A: Into<Word>;
+    type Access: Copy;
+    type Data: Copy;
 
-    fn write<A, V>(&mut self, addr: A, value: V, access: AccessType)
+    fn read<A>(&mut self, addr: A, access: Self::Access) -> Self::Data
     where
-        A: Into<Word>,
-        V: Into<Byte>;
+        A: Address;
+
+    fn write<A, V>(&mut self, addr: A, value: V, access: Self::Access)
+    where
+        A: Address,
+        V: Into<Self::Data>;
 
     fn on_tick(&mut self, cycles: u8) { … }
     fn request_dma(&mut self, request: DmaRequest) -> DmaResult { … }
@@ -26,14 +30,16 @@ pub trait Bus {
 }
 ```
 
-- `AccessType` tags accesses (opcode fetch, stack read/write, DMA, etc.) so a
-  bus can differentiate them.
+- Each bus chooses its own `Access` type (or `()` if it doesn’t care) so
+  higher-level CPUs can tag reads/writes however they see fit.
 - `on_tick` lets peripherals run “in parallel” with the CPU by giving the bus a
   chance to advance its own notion of time each time the CPU consumes cycles.
 - `request_dma`/`poll_dma_cycle` allow the bus to enqueue DMA work that should
   be factored into the CPU’s total cycles.
 
-### Included buses
+### Reference buses
+
+The companion `ull65` crate ships two simple 8-bit implementations built on this trait:
 
 - `SimpleBus` – a flat 64KiB RAM array with helpers to load buffers and update
   the reset vector.
@@ -46,7 +52,8 @@ starting point for a richer memory map.
 ### Quick start
 
 ```rust
-use ull::{AccessType, Bus, Byte, SimpleBus, Word};
+use ull::{Address, Bus, Byte, Word};
+use ull65::{AccessType, SimpleBus};
 
 fn main() {
     let mut bus = SimpleBus::default();
@@ -59,22 +66,26 @@ fn main() {
 struct MirrorBus(SimpleBus);
 
 impl Bus for MirrorBus {
+    type Access = AccessType;
+    type Data = Byte;
+
     fn read<A>(&mut self, addr: A, access: AccessType) -> Byte
     where
-        A: Into<Word>,
+        A: Address,
     {
         self.0.read(addr, access)
     }
 
     fn write<A, V>(&mut self, addr: A, value: V, access: AccessType)
     where
-        A: Into<Word>,
-        V: Into<Byte>,
+        A: Address,
+        V: Into<Self::Data>,
     {
         // Mirror writes into two halves of RAM.
-        let addr = addr.into();
-        self.0.write(addr, value, access);
-        self.0.write(addr + 0x8000, value, access);
+        let addr_mirror = addr + 0x8000;
+        let byte = value.into();
+        self.0.write(addr, byte, access);
+        self.0.write(addr_mirror, byte, access);
     }
 }
 ```

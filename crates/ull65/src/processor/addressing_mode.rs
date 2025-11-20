@@ -4,8 +4,10 @@
 //! instruction with compile-time dispatch.
 
 use crate::processor::Cpu;
+use crate::bus::Mos6502CompatibleBus;
+use crate::{AccessType};
 use ull::word;
-use ull::{AccessType, Bus, Word};
+use ull::Word;
 
 /// Trait for computing effective addresses in different addressing modes.
 ///
@@ -20,7 +22,7 @@ pub trait AddressingMode {
     /// Compute the effective address for this addressing mode.
     ///
     /// Does not advance PC—that's the instruction's responsibility.
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word;
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word;
 
     /// Total bytes for an instruction using this mode (including opcode).
     const BYTES: u16;
@@ -28,7 +30,7 @@ pub trait AddressingMode {
 
 pub struct Immediate;
 impl AddressingMode for Immediate {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, _bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, _bus: &mut B) -> Word {
         cpu.pc + 1
     }
 
@@ -37,7 +39,7 @@ impl AddressingMode for Immediate {
 
 pub struct Absolute;
 impl AddressingMode for Absolute {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let lo = bus.read(cpu.pc + 1, AccessType::DataRead);
         let hi = bus.read(cpu.pc + 2, AccessType::DataRead);
         (lo, hi).into()
@@ -48,7 +50,7 @@ impl AddressingMode for Absolute {
 
 pub struct AbsoluteX;
 impl AddressingMode for AbsoluteX {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let lo = bus.read(cpu.pc + 1, AccessType::DataRead);
         let hi = bus.read(cpu.pc + 2, AccessType::DataRead);
         let base: Word = (lo, hi).into();
@@ -60,7 +62,7 @@ impl AddressingMode for AbsoluteX {
 
 pub struct AbsoluteIndirectX;
 impl AddressingMode for AbsoluteIndirectX {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let lo = bus.read(cpu.pc + 1, AccessType::DataRead);
         let hi = bus.read(cpu.pc + 2, AccessType::DataRead);
         let ptr = Word::from((lo, hi)) + cpu.x;
@@ -76,7 +78,7 @@ impl AddressingMode for AbsoluteIndirectX {
 
 pub struct AbsoluteY;
 impl AddressingMode for AbsoluteY {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let lo = bus.read(cpu.pc + 1, AccessType::DataRead);
         let hi = bus.read(cpu.pc + 2, AccessType::DataRead);
         let base: Word = (lo, hi).into();
@@ -88,7 +90,7 @@ impl AddressingMode for AbsoluteY {
 
 pub struct AbsoluteIndirect;
 impl AddressingMode for AbsoluteIndirect {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let lo = bus.read(cpu.pc + 1, AccessType::DataRead);
         let hi = bus.read(cpu.pc + 2, AccessType::DataRead);
         let ptr: Word = (lo, hi).into();
@@ -106,7 +108,7 @@ impl AddressingMode for AbsoluteIndirect {
 pub struct AbsoluteIndirectCorrect;
 
 impl AddressingMode for AbsoluteIndirectCorrect {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let ptr = Word::from((
             bus.read(cpu.pc + 1, AccessType::DataRead),
             bus.read(cpu.pc + 2, AccessType::DataRead),
@@ -121,7 +123,7 @@ impl AddressingMode for AbsoluteIndirectCorrect {
 
 pub struct ZeroPage;
 impl AddressingMode for ZeroPage {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         bus.read(cpu.pc + 1, AccessType::DataRead).into()
     }
 
@@ -130,7 +132,7 @@ impl AddressingMode for ZeroPage {
 
 pub struct ZeroPageX;
 impl AddressingMode for ZeroPageX {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         (bus.read(cpu.pc + 1, AccessType::DataRead) + cpu.x).into()
     }
 
@@ -139,7 +141,7 @@ impl AddressingMode for ZeroPageX {
 
 pub struct ZeroPageIndirect;
 impl AddressingMode for ZeroPageIndirect {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let ptr = bus.read(cpu.pc + 1, AccessType::DataRead);
         let lo = bus.read(ptr, AccessType::DataRead);
         let hi = bus.read(ptr + 1u8, AccessType::DataRead);
@@ -151,7 +153,7 @@ impl AddressingMode for ZeroPageIndirect {
 
 pub struct ZeroPageY;
 impl AddressingMode for ZeroPageY {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         (bus.read(cpu.pc + 1, AccessType::DataRead) + cpu.y).into()
     }
 
@@ -160,7 +162,7 @@ impl AddressingMode for ZeroPageY {
 
 pub struct ZeroPageXIndirect;
 impl AddressingMode for ZeroPageXIndirect {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let addr = bus.read(cpu.pc + 1, AccessType::DataRead) + cpu.x;
         let lo = bus.read(addr, AccessType::DataRead);
         let hi = bus.read(addr + 1u8, AccessType::DataRead);
@@ -172,7 +174,7 @@ impl AddressingMode for ZeroPageXIndirect {
 
 pub struct ZeroPageIndirectY;
 impl AddressingMode for ZeroPageIndirectY {
-    fn fetch_address<B: Bus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
+    fn fetch_address<B: Mos6502CompatibleBus>(cpu: &Cpu<B>, bus: &mut B) -> Word {
         let addr = bus.read(cpu.pc + 1, AccessType::DataRead);
         let lo = bus.read(addr, AccessType::DataRead);
         let hi = bus.read(addr + 1u8, AccessType::DataRead);

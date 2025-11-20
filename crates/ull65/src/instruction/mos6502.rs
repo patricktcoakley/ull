@@ -1,20 +1,22 @@
 //! The original MOS 6502 instruction set implementation.
 
+use crate::bus::Mos6502CompatibleBus;
 use crate::instruction::{Instruction, InstructionSet, InstructionTable};
 use crate::processor::addressing_mode::{
     Absolute, AbsoluteIndirect, AbsoluteX, AbsoluteY, AddressingMode, Immediate, ZeroPage,
     ZeroPageIndirectY, ZeroPageX, ZeroPageXIndirect, ZeroPageY,
 };
 use crate::processor::flags::Flags;
-use crate::{Cpu, IRQ_VECTOR_HI, IRQ_VECTOR_LO, RunState};
-use ull::{AccessType, Bus, Byte, Nibble};
+use crate::AccessType;
+use crate::{Cpu, RunState, IRQ_VECTOR_HI, IRQ_VECTOR_LO};
 use ull::{byte, word};
+use ull::{Address, Byte, Nibble};
 
 pub struct Mos6502;
 
 impl Mos6502 {
     #[must_use]
-    pub const fn base_table<B: Bus + 'static>() -> InstructionTable<B> {
+    pub const fn base_table<B: Mos6502CompatibleBus + 'static>() -> InstructionTable<B> {
         InstructionTable([
             // 0x00
             Instruction {
@@ -1301,12 +1303,12 @@ impl Mos6502 {
 }
 
 impl InstructionSet for Mos6502 {
-    fn instruction_table<B: Bus + 'static>() -> InstructionTable<B> {
+    fn instruction_table<B: Mos6502CompatibleBus + 'static>() -> InstructionTable<B> {
         Self::base_table()
     }
 }
 
-pub fn lda<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn lda<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     cpu.a = val;
@@ -1315,7 +1317,7 @@ pub fn lda<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn ldx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn ldx<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     cpu.x = val;
@@ -1324,7 +1326,7 @@ pub fn ldx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn ldy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn ldy<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     cpu.y = val;
@@ -1333,76 +1335,76 @@ pub fn ldy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn sta<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sta<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     bus.write(addr, cpu.a, AccessType::DataWrite);
     cpu.pc += AM::BYTES;
 }
 
-pub fn stx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn stx<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     bus.write(addr, cpu.x, AccessType::DataWrite);
     cpu.pc += AM::BYTES;
 }
 
-pub fn sty<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sty<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     bus.write(addr, cpu.y, AccessType::DataWrite);
     cpu.pc += AM::BYTES;
 }
 
-pub fn tax<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn tax<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.x = cpu.a;
     cpu.p.set_zero(cpu.x == 0);
     cpu.p.set_signed(cpu.x.is_signed());
     cpu.pc += 1;
 }
 
-pub fn tay<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn tay<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.y = cpu.a;
     cpu.p.set_zero(cpu.y == 0);
     cpu.p.set_signed(cpu.y.is_signed());
     cpu.pc += 1;
 }
 
-pub fn tsx<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn tsx<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.x = cpu.sp;
     cpu.p.set_zero(cpu.x == 0);
     cpu.p.set_signed(cpu.x.is_signed());
     cpu.pc += 1;
 }
 
-pub fn txa<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn txa<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a = cpu.x;
     cpu.p.set_zero(cpu.a == 0);
     cpu.p.set_signed(cpu.a.is_signed());
     cpu.pc += 1;
 }
 
-pub fn txs<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn txs<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.sp = cpu.x;
     cpu.pc += 1;
 }
 
-pub fn tya<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn tya<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a = cpu.y;
     cpu.p.set_zero(cpu.a == 0);
     cpu.p.set_signed(cpu.a.is_signed());
     cpu.pc += 1;
 }
 
-pub fn pha<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn pha<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.push(bus, cpu.a);
     cpu.pc += 1;
 }
 
-pub fn php<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn php<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let bits = cpu.p | Flags::Break | Flags::Expansion;
     cpu.push(bus, byte!(bits));
     cpu.pc += 1;
 }
 
-pub fn pla<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn pla<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let val = cpu.pop(bus);
     cpu.a = val;
     cpu.p.set_zero(val == 0);
@@ -1410,14 +1412,14 @@ pub fn pla<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn plp<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn plp<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let val = cpu.pop(bus) | Flags::Expansion;
     let masked = val & !Flags::Break;
-    cpu.p = Flags::from_bits_truncate(u8::from(masked));
+    cpu.p = Flags::from_bits_truncate(masked.as_u8());
     cpu.pc += 1;
 }
 
-pub fn asl<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn asl<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let mut val = bus.read(addr, AccessType::DataRead);
 
@@ -1429,7 +1431,7 @@ pub fn asl<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn asl_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn asl_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_carry(cpu.a & Flags::Sign != 0);
     cpu.a <<= 1;
     cpu.p.set_zero(cpu.a == 0);
@@ -1437,7 +1439,7 @@ pub fn asl_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn lsr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn lsr<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let mut val = bus.read(addr, AccessType::DataRead);
 
@@ -1449,7 +1451,7 @@ pub fn lsr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn lsr_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn lsr_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_carry(cpu.a & Flags::Carry != 0);
     cpu.a >>= 1;
     cpu.p.set_zero(cpu.a == 0);
@@ -1457,7 +1459,7 @@ pub fn lsr_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn rol<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rol<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let rotated = rotate_left(cpu, val);
@@ -1465,12 +1467,12 @@ pub fn rol<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn rol_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn rol_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a = rotate_left(cpu, cpu.a);
     cpu.pc += 1;
 }
 
-pub fn ror<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn ror<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let rotated = rotate_right(cpu, val);
@@ -1478,12 +1480,12 @@ pub fn ror<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn ror_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn ror_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.a = rotate_right(cpu, cpu.a);
     cpu.pc += 1;
 }
 
-fn rotate_left<B: Bus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
+fn rotate_left<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
     let old_carry = cpu.p.bit(Flags::Carry);
     cpu.p.set_carry(val & Flags::Sign != 0);
     val <<= 1;
@@ -1493,7 +1495,7 @@ fn rotate_left<B: Bus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
     val
 }
 
-fn rotate_right<B: Bus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
+fn rotate_right<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
     let old_carry = (cpu.p.bit(Flags::Carry)) << 7;
     cpu.p.set_carry(val & Flags::Carry != 0);
     val >>= 1;
@@ -1503,7 +1505,7 @@ fn rotate_right<B: Bus + 'static>(cpu: &mut Cpu<B>, mut val: Byte) -> Byte {
     val
 }
 
-pub fn and<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn and<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
 
@@ -1514,7 +1516,7 @@ pub fn and<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn bit<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bit<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let test = val & cpu.a;
@@ -1526,7 +1528,7 @@ pub fn bit<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn eor<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn eor<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
 
@@ -1537,7 +1539,7 @@ pub fn eor<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn ora<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn ora<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
 
@@ -1548,17 +1550,20 @@ pub fn ora<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn adc<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn adc<S: InstructionSet, AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    bus: &mut B,
+) {
     let addr = AM::fetch_address(cpu, bus);
     let value = bus.read(addr, AccessType::DataRead);
     add_with_carry::<S, _>(cpu, value);
     cpu.pc += AM::BYTES;
 }
 
-pub fn cmp<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn cmp<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
-    let (raw, overflow) = u8::from(cpu.a).overflowing_sub(u8::from(val));
+    let (raw, overflow) = cpu.a.as_u8().overflowing_sub(val.as_u8());
     let result = byte!(raw);
 
     cpu.p.set_zero(result == Byte(0));
@@ -1568,10 +1573,10 @@ pub fn cmp<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn cpx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn cpx<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
-    let (raw, overflow) = u8::from(cpu.x).overflowing_sub(u8::from(val));
+    let (raw, overflow) = cpu.x.as_u8().overflowing_sub(val.as_u8());
     let result = byte!(raw);
 
     cpu.p.set_zero(result == Byte(0));
@@ -1581,10 +1586,10 @@ pub fn cpx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn cpy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn cpy<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
-    let (raw, overflow) = u8::from(cpu.y).overflowing_sub(u8::from(val));
+    let (raw, overflow) = cpu.y.as_u8().overflowing_sub(val.as_u8());
     let result = byte!(raw);
 
     cpu.p.set_zero(result == Byte(0));
@@ -1594,18 +1599,24 @@ pub fn cpy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn sbc<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sbc<S: InstructionSet, AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    bus: &mut B,
+) {
     let addr = AM::fetch_address(cpu, bus);
     let value = bus.read(addr, AccessType::DataRead);
     sub_with_borrow::<S, _>(cpu, value);
     cpu.pc += AM::BYTES;
 }
 
-pub(crate) fn add_with_carry<S: InstructionSet, B: Bus + 'static>(cpu: &mut Cpu<B>, value: Byte) {
-    let carry_in = u16::from(cpu.p.contains(Flags::Carry));
+pub(crate) fn add_with_carry<S: InstructionSet, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    value: Byte,
+) {
+    let carry_in = cpu.p.contains(Flags::Carry) as u16;
     let decimal = S::SUPPORTS_DECIMAL_MODE && cpu.p.contains(Flags::DecimalMode);
 
-    let sum = u16::from(cpu.a) + u16::from(value) + carry_in;
+    let sum = cpu.a.as_u16() + value.as_u16() + carry_in;
     let mut result = byte!((sum & 0x00FF) as u8);
 
     cpu.p
@@ -1641,12 +1652,15 @@ pub(crate) fn add_with_carry<S: InstructionSet, B: Bus + 'static>(cpu: &mut Cpu<
     cpu.a = result;
 }
 
-pub(crate) fn sub_with_borrow<S: InstructionSet, B: Bus + 'static>(cpu: &mut Cpu<B>, value: Byte) {
-    let carry_in = u16::from(cpu.p.contains(Flags::Carry));
+pub(crate) fn sub_with_borrow<S: InstructionSet, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    value: Byte,
+) {
+    let carry_in = cpu.p.contains(Flags::Carry) as u16;
     let decimal = S::SUPPORTS_DECIMAL_MODE && cpu.p.contains(Flags::DecimalMode);
 
     // subtract via addition of the complement
-    let sum = u16::from(cpu.a) + (u16::from(value) ^ 0x00FF) + carry_in;
+    let sum = cpu.a.as_u16() + (value.as_u16() ^ 0x00FF) + carry_in;
     let mut result = byte!((sum & 0x00FF) as u8);
 
     cpu.p
@@ -1686,9 +1700,9 @@ pub(crate) fn sub_with_borrow<S: InstructionSet, B: Bus + 'static>(cpu: &mut Cpu
     cpu.a = result;
 }
 
-pub fn dec<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn dec<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
-    let val = bus.read(addr, AccessType::DataRead) - 1;
+    let val: Byte = bus.read(addr, AccessType::DataRead) - 1;
     bus.write(addr, val, AccessType::DataWrite);
     cpu.p.set_zero(val == 0);
     cpu.p.set_signed(val.is_signed());
@@ -1696,7 +1710,7 @@ pub fn dec<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn dex<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn dex<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.x -= 1;
     cpu.p.set_zero(cpu.x == 0);
     cpu.p.set_signed(cpu.x.is_signed());
@@ -1704,16 +1718,16 @@ pub fn dex<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn dey<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn dey<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.y -= 1;
     cpu.p.set_zero(cpu.y == 0);
     cpu.p.set_signed(cpu.y.is_signed());
     cpu.pc += 1;
 }
 
-pub fn inc<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn inc<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
-    let val = bus.read(addr, AccessType::DataRead) + 1;
+    let val: Byte = bus.read(addr, AccessType::DataRead) + 1;
     bus.write(addr, val, AccessType::DataWrite);
     cpu.p.set_zero(val == 0);
     cpu.p.set_signed(val.is_signed());
@@ -1721,7 +1735,7 @@ pub fn inc<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn inx<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn inx<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.x += 1;
     cpu.p.set_zero(cpu.x == 0);
     cpu.p.set_signed(cpu.x.is_signed());
@@ -1729,7 +1743,7 @@ pub fn inx<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn iny<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn iny<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.y += 1;
     cpu.p.set_zero(cpu.y == 0);
     cpu.p.set_signed(cpu.y.is_signed());
@@ -1737,7 +1751,7 @@ pub fn iny<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
-pub fn brk<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn brk<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let return_pc = word!(cpu.pc + 2);
 
     cpu.push(bus, return_pc.hi());
@@ -1753,11 +1767,11 @@ pub fn brk<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = word!((lo, hi));
 }
 
-pub fn jmp<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn jmp<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = AM::fetch_address(cpu, bus);
 }
 
-pub fn jsr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn jsr<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let return_addr = cpu.pc + (AM::BYTES - 1);
 
@@ -1767,7 +1781,7 @@ pub fn jsr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc = addr;
 }
 
-pub fn rti<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rti<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let mut p = cpu.pop(bus);
     p |= Flags::Expansion; // force E to 1
     p &= !Flags::Break; // clear B
@@ -1778,13 +1792,13 @@ pub fn rti<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = word!((lo, hi));
 }
 
-pub fn rts<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rts<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let lo = cpu.pop(bus);
     let hi = cpu.pop(bus);
     cpu.pc = word!((lo, hi)) + 1;
 }
 
-pub fn bcc<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bcc<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if cpu.p.contains(Flags::Carry) {
@@ -1801,7 +1815,7 @@ pub fn bcc<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bcs<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bcs<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if !cpu.p.contains(Flags::Carry) {
@@ -1818,7 +1832,7 @@ pub fn bcs<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn beq<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn beq<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if !cpu.p.contains(Flags::Zero) {
@@ -1835,7 +1849,7 @@ pub fn beq<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bmi<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bmi<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if !cpu.p.contains(Flags::Sign) {
@@ -1852,7 +1866,7 @@ pub fn bmi<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bne<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bne<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if cpu.p.contains(Flags::Zero) {
@@ -1869,7 +1883,7 @@ pub fn bne<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bpl<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bpl<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if cpu.p.contains(Flags::Sign) {
@@ -1886,7 +1900,7 @@ pub fn bpl<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bvc<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bvc<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if cpu.p.contains(Flags::Overflow) {
@@ -1903,7 +1917,7 @@ pub fn bvc<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn bvs<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn bvs<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let base = cpu.pc + 2;
 
     if !cpu.p.contains(Flags::Overflow) {
@@ -1920,47 +1934,47 @@ pub fn bvs<B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     cpu.pc = target;
 }
 
-pub fn clc<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn clc<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_carry(false);
     cpu.pc += 1;
 }
 
-pub fn cld<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn cld<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_decimal_mode(false);
     cpu.pc += 1;
 }
 
-pub fn cli<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn cli<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_interrupt_disabled(false);
     cpu.pc += 1;
 }
 
-pub fn clv<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn clv<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_overflow(false);
     cpu.pc += 1;
 }
 
-pub fn sec<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn sec<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_carry(true);
     cpu.pc += 1;
 }
 
-pub fn sed<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn sed<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_decimal_mode(true);
     cpu.pc += 1;
 }
 
-pub fn sei<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn sei<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.p.set_interrupt_disabled(true);
     cpu.pc += 1;
 }
 
-pub fn nop<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn nop<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
 // Undocumented instructions
-pub fn las<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn las<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = val & cpu.sp;
@@ -1973,7 +1987,7 @@ pub fn las<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn lax<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn lax<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
 
@@ -1985,14 +1999,14 @@ pub fn lax<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn sax<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sax<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     bus.write(addr, cpu.a & cpu.x, AccessType::DataWrite);
 
     cpu.pc += AM::BYTES;
 }
 
-pub fn sha<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sha<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = addr.hi() + 1;
 
@@ -2001,7 +2015,7 @@ pub fn sha<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn shx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn shx<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = addr.hi() + 1;
 
@@ -2010,7 +2024,7 @@ pub fn shx<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn shy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn shy<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = addr.hi() + 1;
 
@@ -2019,7 +2033,7 @@ pub fn shy<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn shs<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn shs<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
 
     cpu.sp = cpu.x & cpu.a;
@@ -2028,7 +2042,7 @@ pub fn shs<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn anc<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn anc<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = val & cpu.a;
@@ -2041,7 +2055,7 @@ pub fn anc<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn arr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn arr<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let anded = cpu.a & val;
@@ -2065,7 +2079,7 @@ pub fn arr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
         }
     } else {
         cpu.p.set_carry(anded & 0x40 != 0);
-        let val = u8::from(result);
+        let val = result.as_u8();
         cpu.p.set_overflow(((val >> 5) ^ (val >> 6)) & 1 != 0);
     }
 
@@ -2076,7 +2090,7 @@ pub fn arr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn asr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn asr<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = cpu.a & val;
@@ -2089,13 +2103,13 @@ pub fn asr<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn dcp<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn dcp<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let decremented = val - 1;
     bus.write(addr, decremented, AccessType::DataWrite);
 
-    let result = cpu.a - decremented;
+    let result: Byte = cpu.a - decremented;
 
     cpu.p.set_zero(result == 0);
     cpu.p.set_signed(result.is_signed());
@@ -2103,7 +2117,10 @@ pub fn dcp<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn isc<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn isc<S: InstructionSet, AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    bus: &mut B,
+) {
     let addr = AM::fetch_address(cpu, bus);
     let value = bus.read(addr, AccessType::DataRead) + 1;
     bus.write(addr, value, AccessType::DataWrite);
@@ -2113,7 +2130,7 @@ pub fn isc<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cp
     cpu.pc += AM::BYTES;
 }
 
-pub fn rla<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rla<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let rotated = rotate_left(cpu, val);
@@ -2125,7 +2142,10 @@ pub fn rla<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
 
     cpu.pc += AM::BYTES;
 }
-pub fn rra<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn rra<S: InstructionSet, AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    bus: &mut B,
+) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let rotated = rotate_right(cpu, val);
@@ -2135,7 +2155,10 @@ pub fn rra<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cp
     cpu.pc += AM::BYTES;
 }
 
-pub fn sbx<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sbx<S: InstructionSet, AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    bus: &mut B,
+) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let masked = cpu.a & cpu.x;
@@ -2149,7 +2172,7 @@ pub fn sbx<S: InstructionSet, AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cp
     cpu.pc += AM::BYTES;
 }
 
-pub fn slo<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn slo<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = rotate_left(cpu, val);
@@ -2161,7 +2184,7 @@ pub fn slo<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn sre<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn sre<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     let addr = AM::fetch_address(cpu, bus);
     let val = bus.read(addr, AccessType::DataRead);
     let result = rotate_right(cpu, val);
@@ -2173,19 +2196,22 @@ pub fn sre<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) 
     cpu.pc += AM::BYTES;
 }
 
-pub fn xaa<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
+pub fn xaa<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, bus: &mut B) {
     illegal_a(cpu, bus);
 }
 
-pub fn jam<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn jam<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.run_state = RunState::Halted;
 }
 
-pub fn illegal<AM: AddressingMode, B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn illegal<AM: AddressingMode, B: Mos6502CompatibleBus + 'static>(
+    cpu: &mut Cpu<B>,
+    _bus: &mut B,
+) {
     cpu.pc += AM::BYTES;
 }
 
-pub fn illegal_a<B: Bus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
+pub fn illegal_a<B: Mos6502CompatibleBus + 'static>(cpu: &mut Cpu<B>, _bus: &mut B) {
     cpu.pc += 1;
 }
 
@@ -2196,12 +2222,14 @@ mod tests {
         Absolute, AbsoluteIndirect, AbsoluteX, AbsoluteY, Immediate, ZeroPage, ZeroPageIndirectY,
         ZeroPageX, ZeroPageY,
     };
-    use ull::{SimpleBus, Word};
+    use crate::SimpleBus;
+    use ull::{Bus, Word};
+    type TestBus = SimpleBus;
 
     #[test]
     fn test_lda_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
 
@@ -2217,13 +2245,13 @@ mod tests {
 
     #[test]
     fn test_lda_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
 
-        let (lo, hi) = word!(TARGET_ADDRESS).lo_hi();
+        let (lo, hi) = TARGET_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
         bus.write(TARGET_ADDRESS, VALUE, AccessType::DataWrite);
@@ -2238,17 +2266,17 @@ mod tests {
 
     #[test]
     fn test_lda_absolute_x() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: u8 = 0x00;
-        const BASE_ADDRESS: u16 = 0x1234;
-        const TARGET_ADDRESS: u16 = BASE_ADDRESS + OFFSET as u16;
+        const BASE_ADDRESS: Word = Word(0x1234);
+        const TARGET_ADDRESS: Word = Word(BASE_ADDRESS.0 + OFFSET as u16);
 
         cpu.x = byte!(OFFSET);
 
-        let (lo, hi) = word!(BASE_ADDRESS).lo_hi();
+        let (lo, hi) = BASE_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
         bus.write(TARGET_ADDRESS, VALUE, AccessType::DataWrite);
@@ -2263,8 +2291,8 @@ mod tests {
 
     #[test]
     fn test_ldx_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
 
@@ -2281,8 +2309,8 @@ mod tests {
 
     #[test]
     fn test_ldx_zero_sets_flag() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x00);
 
@@ -2298,8 +2326,8 @@ mod tests {
 
     #[test]
     fn test_ldx_negative_sets_sign() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0xFF);
 
@@ -2315,8 +2343,8 @@ mod tests {
 
     #[test]
     fn test_ldy_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
 
@@ -2333,8 +2361,8 @@ mod tests {
 
     #[test]
     fn test_ldy_zero_sets_flag() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x00);
 
@@ -2350,8 +2378,8 @@ mod tests {
 
     #[test]
     fn test_ldy_negative_sets_sign() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x80);
 
@@ -2367,14 +2395,14 @@ mod tests {
 
     #[test]
     fn test_sta_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
 
         cpu.a = VALUE;
-        let (lo, hi) = word!(TARGET_ADDRESS).lo_hi();
+        let (lo, hi) = TARGET_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
 
@@ -2386,17 +2414,17 @@ mod tests {
 
     #[test]
     fn test_sta_absolute_x() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: u8 = 0x00;
-        const BASE_ADDRESS: u16 = 0x1234;
-        const TARGET_ADDRESS: u16 = BASE_ADDRESS + OFFSET as u16;
+        const BASE_ADDRESS: Word = Word(0x1234);
+        const TARGET_ADDRESS: Word = Word(BASE_ADDRESS.0 + OFFSET as u16);
 
         cpu.a = VALUE;
         cpu.x = byte!(OFFSET);
-        let (lo, hi) = word!(BASE_ADDRESS).lo_hi();
+        let (lo, hi) = BASE_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
 
@@ -2408,17 +2436,17 @@ mod tests {
 
     #[test]
     fn test_sta_absolute_y() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: u8 = 0x00;
-        const BASE_ADDRESS: u16 = 0x1234;
-        const TARGET_ADDRESS: u16 = BASE_ADDRESS + OFFSET as u16;
+        const BASE_ADDRESS: Word = Word(0x1234);
+        const TARGET_ADDRESS: Word = Word(BASE_ADDRESS.0 + OFFSET as u16);
 
         cpu.a = VALUE;
         cpu.y = byte!(OFFSET);
-        let (lo, hi) = word!(BASE_ADDRESS).lo_hi();
+        let (lo, hi) = BASE_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
 
@@ -2430,8 +2458,8 @@ mod tests {
 
     #[test]
     fn test_sta_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const TARGET_ADDRESS: Byte = Byte(0x12);
@@ -2441,17 +2469,14 @@ mod tests {
 
         sta::<ZeroPage, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(TARGET_ADDRESS), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(TARGET_ADDRESS, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPage::BYTES.into());
     }
 
     #[test]
     fn test_sta_zero_page_x() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: Byte = Byte(0x00);
@@ -2464,17 +2489,14 @@ mod tests {
 
         sta::<ZeroPageX, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(target_address), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(target_address, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPageX::BYTES.into());
     }
 
     #[test]
     fn test_sta_zero_page_y() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: Byte = Byte(0x00);
@@ -2487,31 +2509,28 @@ mod tests {
 
         sta::<ZeroPageY, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(target_address), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(target_address, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPageY::BYTES.into());
     }
 
     #[test]
     fn test_sta_zero_page_indirect_y() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const OFFSET: u8 = 0x05;
         const POINTER_LOCATION: Byte = Byte(0x10);
-        const BASE_ADDRESS: u16 = 0x1200;
-        const TARGET_ADDRESS: u16 = BASE_ADDRESS + OFFSET as u16; // 0x1205
+        const BASE_ADDRESS: Word = Word(0x1200);
+        const TARGET_ADDRESS: Word = Word(BASE_ADDRESS.0 + OFFSET as u16); // 0x1205
         const VALUE: Byte = Byte(0x42);
 
         cpu.a = VALUE;
         cpu.y = byte!(OFFSET);
 
-        let (lo, hi) = word!(BASE_ADDRESS).lo_hi();
+        let (lo, hi) = BASE_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, POINTER_LOCATION, AccessType::DataWrite);
-        bus.write(u16::from(POINTER_LOCATION), lo, AccessType::DataWrite);
-        bus.write(u16::from(POINTER_LOCATION) + 1, hi, AccessType::DataRead);
+        bus.write(POINTER_LOCATION, lo, AccessType::DataWrite);
+        bus.write(POINTER_LOCATION + 1, hi, AccessType::DataRead);
 
         sta::<ZeroPageIndirectY, _>(&mut cpu, &mut bus);
 
@@ -2521,14 +2540,14 @@ mod tests {
 
     #[test]
     fn test_stx_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
 
         cpu.x = VALUE;
-        let (lo, hi) = word!(TARGET_ADDRESS).lo_hi();
+        let (lo, hi) = TARGET_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
 
@@ -2540,8 +2559,8 @@ mod tests {
 
     #[test]
     fn test_stx_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const TARGET_ADDRESS: Byte = Byte(0x12);
@@ -2551,17 +2570,14 @@ mod tests {
 
         stx::<ZeroPage, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(TARGET_ADDRESS), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(TARGET_ADDRESS, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPage::BYTES.into());
     }
 
     #[test]
     fn test_stx_zero_page_y() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: Byte = Byte(0x04);
@@ -2574,23 +2590,20 @@ mod tests {
 
         stx::<ZeroPageY, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(target_address), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(target_address, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPageY::BYTES.into());
     }
 
     #[test]
     fn test_sty_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
 
         cpu.y = VALUE;
-        let (lo, hi) = word!(TARGET_ADDRESS).lo_hi();
+        let (lo, hi) = TARGET_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
 
@@ -2602,8 +2615,8 @@ mod tests {
 
     #[test]
     fn test_sty_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const TARGET_ADDRESS: Byte = Byte(0x12);
@@ -2613,17 +2626,14 @@ mod tests {
 
         sty::<ZeroPage, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(TARGET_ADDRESS), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(TARGET_ADDRESS, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPage::BYTES.into());
     }
 
     #[test]
     fn test_sty_zero_page_y() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         const OFFSET: Byte = Byte(0x04);
@@ -2636,17 +2646,14 @@ mod tests {
 
         sty::<ZeroPageX, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(target_address), AccessType::DataRead),
-            VALUE
-        );
+        assert_eq!(bus.read(target_address, AccessType::DataRead), VALUE);
         assert_eq!(cpu.pc, ZeroPageX::BYTES.into());
     }
 
     #[test]
     fn test_tax() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.a = VALUE;
@@ -2662,8 +2669,8 @@ mod tests {
 
     #[test]
     fn test_tay() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.a = VALUE;
@@ -2679,8 +2686,8 @@ mod tests {
 
     #[test]
     fn test_tsx() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0xFD);
         cpu.sp = VALUE;
@@ -2696,8 +2703,8 @@ mod tests {
 
     #[test]
     fn test_txa() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.x = VALUE;
@@ -2713,8 +2720,8 @@ mod tests {
 
     #[test]
     fn test_txs() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0xFF);
         cpu.x = VALUE;
@@ -2728,8 +2735,8 @@ mod tests {
 
     #[test]
     fn test_tya() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.y = VALUE;
@@ -2745,8 +2752,8 @@ mod tests {
 
     #[test]
     fn test_pha() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.a = VALUE;
@@ -2756,7 +2763,7 @@ mod tests {
         pha(&mut cpu, &mut bus);
 
         assert_eq!(
-            bus.read(Word(0x0100 + u16::from(initial_sp)), AccessType::DataRead),
+            bus.read(Word(0x0100 + initial_sp.as_u16()), AccessType::DataRead),
             VALUE
         );
         assert_eq!(cpu.sp, initial_sp - 1);
@@ -2765,8 +2772,8 @@ mod tests {
 
     #[test]
     fn test_php() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         cpu.p.insert(Flags::Carry);
         cpu.p.insert(Flags::Zero);
@@ -2775,7 +2782,7 @@ mod tests {
         let initial_pc = cpu.pc;
         php(&mut cpu, &mut bus);
 
-        let pushed_flags = bus.read(Word(0x0100 + u16::from(initial_sp)), AccessType::DataRead);
+        let pushed_flags = bus.read(Word(0x0100 + initial_sp.as_u16()), AccessType::DataRead);
         assert_eq!(pushed_flags & Flags::Carry, Flags::Carry);
         assert_eq!(pushed_flags & Flags::Zero, Flags::Zero);
         assert_eq!(pushed_flags & Flags::Break, Flags::Break);
@@ -2786,8 +2793,8 @@ mod tests {
 
     #[test]
     fn test_pla() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
         cpu.sp = Byte(0xFE);
@@ -2805,8 +2812,8 @@ mod tests {
 
     #[test]
     fn test_plp() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         let flags_value = byte!(Flags::Carry | Flags::Zero);
         cpu.sp = Byte(0xFE);
@@ -2823,8 +2830,8 @@ mod tests {
 
     #[test]
     fn test_asl_a() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b1010_0100);
@@ -2842,8 +2849,8 @@ mod tests {
 
     #[test]
     fn test_asl_a_with_carry() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b1101_0010);
         const EXPECTED: Byte = Byte(0b1010_0100);
@@ -2861,8 +2868,8 @@ mod tests {
 
     #[test]
     fn test_lsr_a() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b0010_1001);
@@ -2880,8 +2887,8 @@ mod tests {
 
     #[test]
     fn test_lsr_a_with_carry() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0011);
         const EXPECTED: Byte = Byte(0b0010_1001);
@@ -2899,8 +2906,8 @@ mod tests {
 
     #[test]
     fn test_rol_a() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b1010_0101);
@@ -2919,8 +2926,8 @@ mod tests {
 
     #[test]
     fn test_rol_a_with_carry() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b1101_0010);
         const EXPECTED: Byte = Byte(0b1010_0100);
@@ -2939,8 +2946,8 @@ mod tests {
 
     #[test]
     fn test_ror_a() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b1010_1001);
@@ -2959,8 +2966,8 @@ mod tests {
 
     #[test]
     fn test_ror_a_with_carry() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INPUT: Byte = Byte(0b0101_0011);
         const EXPECTED: Byte = Byte(0b0010_1001);
@@ -2979,8 +2986,8 @@ mod tests {
 
     #[test]
     fn test_asl_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const ADDRESS: Byte = Byte(0x42);
         const INPUT: Byte = Byte(0b0101_0010);
@@ -2998,14 +3005,14 @@ mod tests {
 
     #[test]
     fn test_lsr_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b0010_1001);
 
-        let (lo, hi) = word!(TARGET_ADDRESS).lo_hi();
+        let (lo, hi) = TARGET_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
         bus.write(TARGET_ADDRESS, INPUT, AccessType::DataWrite);
@@ -3019,8 +3026,8 @@ mod tests {
 
     #[test]
     fn test_rol_zero_page_x() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const BASE_ADDRESS: Byte = Byte(0x40);
         const OFFSET: Byte = Byte(0x02);
@@ -3032,33 +3039,30 @@ mod tests {
         cpu.p.insert(Flags::Carry);
 
         bus.write(cpu.pc + 1, BASE_ADDRESS, AccessType::DataWrite);
-        bus.write(u16::from(target_address), INPUT, AccessType::DataWrite);
+        bus.write(target_address, INPUT, AccessType::DataWrite);
 
         rol::<ZeroPageX, _>(&mut cpu, &mut bus);
 
-        assert_eq!(
-            bus.read(u16::from(target_address), AccessType::DataRead),
-            EXPECTED
-        );
+        assert_eq!(bus.read(target_address, AccessType::DataRead), EXPECTED);
         assert!(!cpu.p.contains(Flags::Carry));
         assert_eq!(cpu.pc, ZeroPageX::BYTES.into());
     }
 
     #[test]
     fn test_ror_absolute_x() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        const BASE_ADDRESS: u16 = 0x1230;
+        const BASE_ADDRESS: Word = Word(0x1230);
         const OFFSET: u8 = 0x04;
-        const TARGET_ADDRESS: u16 = BASE_ADDRESS + OFFSET as u16;
+        const TARGET_ADDRESS: Word = Word(BASE_ADDRESS.0 + OFFSET as u16);
         const INPUT: Byte = Byte(0b0101_0010);
         const EXPECTED: Byte = Byte(0b1010_1001);
 
         cpu.x = byte!(OFFSET);
         cpu.p.insert(Flags::Carry);
 
-        let (lo, hi) = word!(BASE_ADDRESS).lo_hi();
+        let (lo, hi) = BASE_ADDRESS.lo_hi();
         bus.write(cpu.pc + 1, lo, AccessType::DataWrite);
         bus.write(cpu.pc + 2, hi, AccessType::DataWrite);
         bus.write(TARGET_ADDRESS, INPUT, AccessType::DataWrite);
@@ -3072,8 +3076,8 @@ mod tests {
 
     #[test]
     fn test_and_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x3C);
         const MASK_VALUE: Byte = Byte(0x0F);
@@ -3092,8 +3096,8 @@ mod tests {
 
     #[test]
     fn test_ora_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x01);
         const OR_VALUE: Byte = Byte(0x80);
@@ -3112,8 +3116,8 @@ mod tests {
 
     #[test]
     fn test_eor_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0xFF);
         const XOR_VALUE: Byte = Byte(0x0F);
@@ -3132,8 +3136,8 @@ mod tests {
 
     #[test]
     fn test_adc_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x70);
         const ADD_VALUE: Byte = Byte(0x10);
@@ -3154,8 +3158,8 @@ mod tests {
 
     #[test]
     fn test_sbc_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x10);
         const SUB_VALUE: Byte = Byte(0x10);
@@ -3176,8 +3180,8 @@ mod tests {
 
     #[test]
     fn test_inc_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const ADDRESS: Byte = Byte(0x30);
         const INITIAL_VALUE: Byte = Byte(0xFF);
@@ -3194,8 +3198,8 @@ mod tests {
 
     #[test]
     fn test_dec_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const ADDRESS: Byte = Byte(0x31);
         const INITIAL_VALUE: Byte = Byte(0x00);
@@ -3212,8 +3216,8 @@ mod tests {
 
     #[test]
     fn test_inx_wraps_and_updates_pc() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0xFF);
         const EXPECTED_VALUE: Byte = Byte(0x00);
@@ -3228,8 +3232,8 @@ mod tests {
 
     #[test]
     fn test_iny_wraps_and_updates_pc() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0x7F);
         const EXPECTED_VALUE: Byte = Byte(0x80);
@@ -3244,8 +3248,8 @@ mod tests {
 
     #[test]
     fn test_cpx_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x10);
 
@@ -3262,8 +3266,8 @@ mod tests {
 
     #[test]
     fn test_cpy_immediate() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x10);
 
@@ -3280,8 +3284,8 @@ mod tests {
 
     #[test]
     fn test_bit_zero_page() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0b0100_0000);
         const ADDRESS: Byte = Byte(0x40);
@@ -3304,8 +3308,8 @@ mod tests {
         const OFFSET: Byte = Byte(0x02);
 
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.remove(Flags::Zero);
@@ -3315,8 +3319,8 @@ mod tests {
             assert_eq!(cpu.pc, Word(0x0004));
         }
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.insert(Flags::Zero);
@@ -3332,8 +3336,8 @@ mod tests {
         const OFFSET: Byte = Byte(0x02);
 
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.insert(Flags::Zero);
@@ -3343,8 +3347,8 @@ mod tests {
             assert_eq!(cpu.pc, Word(0x0004));
         }
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.remove(Flags::Zero);
@@ -3360,8 +3364,8 @@ mod tests {
         const OFFSET: Byte = Byte(0x02);
 
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.insert(Flags::Sign);
@@ -3371,8 +3375,8 @@ mod tests {
             assert_eq!(cpu.pc, Word(0x0004));
         }
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.remove(Flags::Sign);
@@ -3385,8 +3389,8 @@ mod tests {
 
     #[test]
     fn test_bpl_branching() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const OFFSET: Byte = Byte(0x02);
 
@@ -3403,8 +3407,8 @@ mod tests {
         const OFFSET: Byte = Byte(0x02);
 
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.remove(Flags::Carry);
@@ -3414,8 +3418,8 @@ mod tests {
             assert_eq!(cpu.pc, Word(0x0004));
         }
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.insert(Flags::Carry);
@@ -3431,8 +3435,8 @@ mod tests {
         const OFFSET: Byte = Byte(0x02);
 
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.remove(Flags::Overflow);
@@ -3442,8 +3446,8 @@ mod tests {
             assert_eq!(cpu.pc, Word(0x0004));
         }
         {
-            let mut bus = SimpleBus::default();
-            let mut cpu = Cpu::<SimpleBus>::default();
+            let mut bus = TestBus::default();
+            let mut cpu = Cpu::<TestBus>::default();
 
             bus.write(cpu.pc + 1, OFFSET, AccessType::DataWrite);
             cpu.p.insert(Flags::Overflow);
@@ -3456,57 +3460,61 @@ mod tests {
 
     #[test]
     fn test_jmp_absolute() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        const TARGET_ADDRESS: u16 = 0x1234;
+        const TARGET_ADDRESS: Word = Word(0x1234);
 
-        bus.write(cpu.pc + 1, Byte(0x34), AccessType::DataWrite);
-        bus.write(cpu.pc + 2, Byte(0x12), AccessType::DataWrite);
+        bus.write(cpu.pc + 1, TARGET_ADDRESS.lo(), AccessType::DataWrite);
+        bus.write(cpu.pc + 2, TARGET_ADDRESS.hi(), AccessType::DataWrite);
 
         jmp::<Absolute, _>(&mut cpu, &mut bus);
 
-        assert_eq!(cpu.pc, Word(TARGET_ADDRESS));
+        assert_eq!(cpu.pc, TARGET_ADDRESS);
     }
 
     #[test]
     fn test_jmp_indirect() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        const POINTER_ADDRESS: u16 = 0x2000;
-        const TARGET_ADDRESS: u16 = 0x5678;
+        const POINTER_ADDRESS: Word = Word(0x2000);
+        const TARGET_ADDRESS: Word = Word(0x5678);
 
         bus.write(cpu.pc + 1, Byte(0x00), AccessType::DataWrite);
         bus.write(cpu.pc + 2, Byte(0x20), AccessType::DataWrite);
-        bus.write(Word(POINTER_ADDRESS), Byte(0x78), AccessType::DataWrite);
-        bus.write(Word(POINTER_ADDRESS + 1), Byte(0x56), AccessType::DataWrite);
+        bus.write(POINTER_ADDRESS, TARGET_ADDRESS.lo(), AccessType::DataWrite);
+        bus.write(
+            POINTER_ADDRESS + 1u16,
+            TARGET_ADDRESS.hi(),
+            AccessType::DataWrite,
+        );
 
         jmp::<AbsoluteIndirect, _>(&mut cpu, &mut bus);
 
-        assert_eq!(cpu.pc, Word(TARGET_ADDRESS));
+        assert_eq!(cpu.pc, TARGET_ADDRESS);
     }
 
     #[test]
     fn test_jsr_and_rts() {
-        const JSR_TARGET: u16 = 0x2000;
-        const RTS_TARGET: u16 = 0x1235;
+        const JSR_TARGET: Word = Word(0x2000);
+        const RTS_TARGET: Word = Word(0x1235);
 
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        bus.write(cpu.pc + 1, Byte(0x00), AccessType::DataWrite);
-        bus.write(cpu.pc + 2, Byte(0x20), AccessType::DataWrite);
+        bus.write(cpu.pc + 1, JSR_TARGET.lo(), AccessType::DataWrite);
+        bus.write(cpu.pc + 2, JSR_TARGET.hi(), AccessType::DataWrite);
 
         jsr::<Absolute, _>(&mut cpu, &mut bus);
 
-        assert_eq!(cpu.pc, Word(JSR_TARGET));
+        assert_eq!(cpu.pc, JSR_TARGET);
         assert_eq!(cpu.sp, 0xFB);
         assert_eq!(bus.read(Word(0x01FD), AccessType::DataRead), 0x00);
         assert_eq!(bus.read(Word(0x01FC), AccessType::DataRead), 0x02);
 
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         cpu.sp = Byte(0xFB);
         bus.write(Word(0x01FC), Byte(0x34), AccessType::DataWrite);
@@ -3514,14 +3522,14 @@ mod tests {
 
         rts(&mut cpu, &mut bus);
 
-        assert_eq!(cpu.pc, Word(RTS_TARGET));
+        assert_eq!(cpu.pc, RTS_TARGET);
         assert_eq!(cpu.sp, 0xFD);
     }
 
     #[test]
     fn test_brk_and_rti() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         cpu.pc = Word(0x0200);
         bus.write(IRQ_VECTOR_LO, Byte(0x00), AccessType::DataWrite);
@@ -3537,8 +3545,8 @@ mod tests {
         assert_ne!(status & Flags::Break, 0);
         assert!(cpu.p.contains(Flags::InterruptDisabled));
 
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.sp = Byte(0xFA);
         bus.write(
             Word(0x01FB),
@@ -3556,8 +3564,8 @@ mod tests {
 
     #[test]
     fn test_cmp_equal() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const VALUE: Byte = Byte(0x42);
 
@@ -3574,8 +3582,8 @@ mod tests {
 
     #[test]
     fn test_cmp_less_than() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x20);
         const COMPARE_VALUE: Byte = Byte(0x42);
@@ -3593,8 +3601,8 @@ mod tests {
 
     #[test]
     fn test_cmp_greater_than() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const A_VALUE: Byte = Byte(0x50);
         const COMPARE_VALUE: Byte = Byte(0x42);
@@ -3612,8 +3620,8 @@ mod tests {
 
     #[test]
     fn test_dex_wraps() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0x00);
         const EXPECTED_VALUE: Byte = Byte(0xFF);
@@ -3631,8 +3639,8 @@ mod tests {
 
     #[test]
     fn test_dex_sets_zero() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0x01);
         const EXPECTED_VALUE: Byte = Byte(0x00);
@@ -3649,8 +3657,8 @@ mod tests {
 
     #[test]
     fn test_dey_wraps() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0x00);
         const EXPECTED_VALUE: Byte = Byte(0xFF);
@@ -3668,8 +3676,8 @@ mod tests {
 
     #[test]
     fn test_dey_sets_zero() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         const INITIAL_VALUE: Byte = Byte(0x01);
         const EXPECTED_VALUE: Byte = Byte(0x00);
@@ -3689,8 +3697,8 @@ mod tests {
     #[test]
     fn test_stack_push_pop_sequence() {
         // Tests pushing multiple values and popping them in LIFO order
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         // Push A, X, Y onto stack
@@ -3725,8 +3733,8 @@ mod tests {
 
     #[test]
     fn test_countdown_loop() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         cpu.x = Byte(0x05);
@@ -3745,8 +3753,8 @@ mod tests {
 
     #[test]
     fn test_function_call_return_sequence() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
         cpu.pc = Word(0x0800);
         bus.write(Word(0x0800), Byte(0x20), AccessType::DataWrite);
@@ -3760,7 +3768,7 @@ mod tests {
         assert_eq!(cpu.sp, initial_sp - 2);
 
         // JSR pushes return address with HI byte first, then LO byte
-        let base = 0x0100 + u16::from(initial_sp);
+        let base = 0x0100 + initial_sp.as_u16();
         let return_hi = bus.read(Word(base), AccessType::DataRead);
         let return_lo = bus.read(Word(base - 1), AccessType::DataRead);
         assert_eq!(return_hi, Byte(0x08));
@@ -3774,8 +3782,8 @@ mod tests {
     #[test]
     fn test_16bit_addition() {
         // Demonstrates 16-bit addition using 8-bit ADC with carry propagation
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         const FIRST_LO: Byte = Byte(0x34);
@@ -3804,8 +3812,8 @@ mod tests {
 
     #[test]
     fn test_multi_byte_comparison() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         const FIRST_VALUE_HI: Byte = Byte(0x12);
@@ -3833,42 +3841,34 @@ mod tests {
 
     #[test]
     fn test_memory_copy_loop() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
 
-        const SOURCE_ADDR: u16 = 0x1000;
-        const DEST_ADDR: u16 = 0x2000;
+        const SOURCE_ADDR: Word = Word(0x1000);
+        const DEST_ADDR: Word = Word(0x2000);
         let source_data = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE];
 
         for (i, &byte) in source_data.iter().enumerate() {
-            bus.write(
-                Word(SOURCE_ADDR + i as u16),
-                Byte(byte),
-                AccessType::DataWrite,
-            );
+            bus.write(SOURCE_ADDR + i as u16, Byte(byte), AccessType::DataWrite);
         }
 
         for i in 0..source_data.len() as u8 {
             cpu.x = Byte(i);
-            let source_val = bus.read(Word(SOURCE_ADDR + u16::from(cpu.x)), AccessType::DataRead);
+            let source_val = bus.read(SOURCE_ADDR + cpu.x.as_u16(), AccessType::DataRead);
             cpu.a = source_val;
-            bus.write(
-                Word(DEST_ADDR + u16::from(cpu.x)),
-                cpu.a,
-                AccessType::DataWrite,
-            );
+            bus.write(DEST_ADDR + cpu.x.as_u16(), cpu.a, AccessType::DataWrite);
         }
 
         for (i, &expected) in source_data.iter().enumerate() {
-            let copied = bus.read(Word(DEST_ADDR + i as u16), AccessType::DataRead);
+            let copied = bus.read(DEST_ADDR + i as u16, AccessType::DataRead);
             assert_eq!(copied, Byte(expected));
         }
     }
 
     #[test]
     fn test_bit_manipulation_sequence() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         const INITIAL_VALUE: Byte = Byte(0b0000_1111);
@@ -3894,8 +3894,8 @@ mod tests {
 
     #[test]
     fn test_conditional_flag_based_logic() {
-        let mut bus = SimpleBus::default();
-        let mut cpu = Cpu::<SimpleBus>::default();
+        let mut bus = TestBus::default();
+        let mut cpu = Cpu::<TestBus>::default();
         cpu.pc = Word(0x0200);
 
         const VALUE_ABOVE_THRESHOLD: Byte = Byte(0x90);

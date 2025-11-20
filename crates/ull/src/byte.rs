@@ -12,7 +12,7 @@
 //! assert_eq!(Byte(0xFF) + 1u8, Byte(0x00));
 //! ```
 
-use crate::nibble::Nibble;
+use crate::{Address, nibble::Nibble};
 use core::fmt::{Display, Formatter, LowerHex, UpperHex};
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl,
@@ -42,13 +42,6 @@ impl Byte {
     #[must_use]
     pub fn is_signed(self) -> bool {
         self.0 & 0x80 != 0
-    }
-
-    /// Converts to `usize` for indexing.
-    #[inline]
-    #[must_use]
-    pub const fn as_usize(self) -> usize {
-        self.0 as usize
     }
 
     #[inline]
@@ -87,6 +80,11 @@ impl From<u8> for Byte {
         Byte(value)
     }
 }
+impl From<bool> for Byte {
+    fn from(value: bool) -> Self {
+        Byte(value as u8)
+    }
+}
 impl From<i8> for Byte {
     fn from(value: i8) -> Self {
         Byte(value as u8)
@@ -121,7 +119,13 @@ impl From<(u8, u8)> for Byte {
 
 impl From<(Nibble, Nibble)> for Byte {
     fn from((low, high): (Nibble, Nibble)) -> Self {
-        Byte::from((u8::from(low), u8::from(high)))
+        Byte::from((low.as_u8(), high.as_u8()))
+    }
+}
+
+impl From<Nibble> for Byte {
+    fn from(value: Nibble) -> Self {
+        Byte(value.as_u8())
     }
 }
 
@@ -161,6 +165,12 @@ impl From<Byte> for usize {
     }
 }
 
+impl From<usize> for Byte {
+    fn from(value: usize) -> Self {
+        Byte((value & 0xFF) as u8)
+    }
+}
+
 impl Add<Byte> for Byte {
     type Output = Byte;
 
@@ -174,6 +184,28 @@ impl Add<u8> for Byte {
 
     fn add(self, rhs: u8) -> Byte {
         Byte(self.0.wrapping_add(rhs))
+    }
+}
+
+impl Add<usize> for Byte {
+    type Output = Byte;
+
+    fn add(self, rhs: usize) -> Byte {
+        Byte(self.0.wrapping_add(rhs as u8))
+    }
+}
+
+impl Add<i32> for Byte {
+    type Output = Byte;
+
+    fn add(self, rhs: i32) -> Byte {
+        byte!(i32::from(self.0).wrapping_add(rhs))
+    }
+}
+
+impl AddAssign<i32> for Byte {
+    fn add_assign(&mut self, rhs: i32) {
+        *self = *self + rhs;
     }
 }
 
@@ -202,6 +234,28 @@ impl Sub<u8> for Byte {
 
     fn sub(self, rhs: u8) -> Byte {
         Byte(self.0.wrapping_sub(rhs))
+    }
+}
+
+impl Sub<usize> for Byte {
+    type Output = Byte;
+
+    fn sub(self, rhs: usize) -> Byte {
+        Byte(self.0.wrapping_sub(rhs as u8))
+    }
+}
+
+impl Sub<i32> for Byte {
+    type Output = Byte;
+
+    fn sub(self, rhs: i32) -> Byte {
+        byte!(i32::from(self.0).wrapping_sub(rhs))
+    }
+}
+
+impl SubAssign<i32> for Byte {
+    fn sub_assign(&mut self, rhs: i32) {
+        *self = *self - rhs;
     }
 }
 
@@ -277,7 +331,7 @@ impl Add<Nibble> for Byte {
     type Output = Byte;
 
     fn add(self, rhs: Nibble) -> Byte {
-        self + u8::from(rhs)
+        self + rhs.as_u8()
     }
 }
 
@@ -291,7 +345,7 @@ impl Sub<Nibble> for Byte {
     type Output = Byte;
 
     fn sub(self, rhs: Nibble) -> Byte {
-        self - u8::from(rhs)
+        self - rhs.as_u8()
     }
 }
 
@@ -305,13 +359,13 @@ impl BitAnd<Nibble> for Byte {
     type Output = Byte;
 
     fn bitand(self, rhs: Nibble) -> Byte {
-        self & u8::from(rhs)
+        self & rhs.as_u8()
     }
 }
 
 impl BitAndAssign<Nibble> for Byte {
     fn bitand_assign(&mut self, rhs: Nibble) {
-        *self &= u8::from(rhs);
+        *self &= rhs.as_u8();
     }
 }
 
@@ -319,13 +373,13 @@ impl BitOr<Nibble> for Byte {
     type Output = Byte;
 
     fn bitor(self, rhs: Nibble) -> Byte {
-        self | u8::from(rhs)
+        self | rhs.as_u8()
     }
 }
 
 impl BitOrAssign<Nibble> for Byte {
     fn bitor_assign(&mut self, rhs: Nibble) {
-        *self |= u8::from(rhs);
+        *self |= rhs.as_u8();
     }
 }
 
@@ -333,13 +387,13 @@ impl BitXor<Nibble> for Byte {
     type Output = Byte;
 
     fn bitxor(self, rhs: Nibble) -> Byte {
-        self ^ u8::from(rhs)
+        self ^ rhs.as_u8()
     }
 }
 
 impl BitXorAssign<Nibble> for Byte {
     fn bitxor_assign(&mut self, rhs: Nibble) {
-        *self ^= u8::from(rhs);
+        *self ^= rhs.as_u8();
     }
 }
 

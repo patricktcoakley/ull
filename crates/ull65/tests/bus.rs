@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
-use ull::{AccessType, Bus, Byte, DmaRequest, DmaResult, Word};
+use ull::{Address, Bus, Byte, DmaRequest, DmaResult, Word};
 use ull65::instruction::mos6502::Mos6502;
 use ull65::processor::cpu::Cpu;
+use ull65::{AccessType, ResetVectorExt};
 
 struct TestBus {
     mem: [u8; 0x10000],
@@ -24,22 +25,23 @@ impl Default for TestBus {
 }
 
 impl Bus for TestBus {
+    type Access = AccessType;
+    type Data = Byte;
+
     fn read<A>(&mut self, addr: A, _access: AccessType) -> Byte
     where
-        A: Into<Word>,
+        A: Address,
     {
-        let addr = addr.into();
         Byte(self.mem[addr.as_usize()])
     }
 
     fn write<A, V>(&mut self, addr: A, value: V, _access: AccessType)
     where
-        A: Into<Word>,
-        V: Into<Byte>,
+        A: Address,
+        V: Into<Self::Data>,
     {
-        let addr = addr.into();
-        let value = value.into();
-        self.mem[addr.as_usize()] = value.0;
+        let byte: Byte = value.into();
+        self.mem[addr.as_usize()] = byte.0;
     }
 
     fn on_tick(&mut self, cycles: u8) {
